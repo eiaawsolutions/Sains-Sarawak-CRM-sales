@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { ensureBootstrapped } from "@/db/bootstrap";
 import { QuotationActionsBar } from "@/components/quotation-actions-bar";
-import { submitQuotation, markSentQuotation } from "@/server/quotation-actions";
+import { submitQuotation, markSentQuotation, vetApproveQuotation } from "@/server/quotation-actions";
 import { QuotationStatus } from "@/server/quotation-state-machine";
 
 export default async function QuotationDetailPage({
@@ -71,8 +71,10 @@ export default async function QuotationDetailPage({
   const canEdit = isEditable && ["AccountManager", "UnitHead", "SectionHead", "Administrator"].includes(role);
 
   const ownerOrAdmin = q.ownerUserId === session.user.id || role === "Administrator";
+  const isVetter = ["SectionHead", "UnitHead", "Director", "Administrator"].includes(role);
   const hasLines = lines.length > 0;
   const canSubmit     = ownerOrAdmin && q.statusId === QuotationStatus.Draft         && hasLines;
+  const canVetApprove = isVetter     && q.statusId === QuotationStatus.UnderVetting;
   const canMarkSent   = ownerOrAdmin && q.statusId === QuotationStatus.Approved;
   const canWinOrReject= ownerOrAdmin && q.statusId === QuotationStatus.QuotationSent;
 
@@ -170,9 +172,11 @@ export default async function QuotationDetailPage({
             quotationId={q.id}
             statusId={q.statusId}
             canSubmit={canSubmit}
+            canVetApprove={canVetApprove}
             canMarkSent={canMarkSent}
             canWinOrReject={canWinOrReject}
             submitAction={submitQuotation}
+            vetApproveAction={vetApproveQuotation}
             markSentAction={markSentQuotation}
           />
         </div>

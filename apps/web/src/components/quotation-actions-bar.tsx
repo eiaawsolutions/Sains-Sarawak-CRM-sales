@@ -12,9 +12,11 @@ type Props = {
   quotationId: string;
   statusId: number;
   canSubmit: boolean;
+  canVetApprove: boolean;
   canMarkSent: boolean;
   canWinOrReject: boolean;
   submitAction: (fd: FormData) => Promise<void>;
+  vetApproveAction: (fd: FormData) => Promise<void>;
   markSentAction: (fd: FormData) => Promise<void>;
 };
 
@@ -25,7 +27,11 @@ function confirming(message: string) {
 }
 
 export function QuotationActionsBar(props: Props) {
-  const { quotationId, statusId, canSubmit, canMarkSent, canWinOrReject, submitAction, markSentAction } = props;
+  const {
+    quotationId, statusId,
+    canSubmit, canVetApprove, canMarkSent, canWinOrReject,
+    submitAction, vetApproveAction, markSentAction,
+  } = props;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -44,6 +50,18 @@ export function QuotationActionsBar(props: Props) {
             className="rounded-pill bg-gradient-accent px-5 py-2 text-sm font-semibold text-white shadow-accent-glow"
           >
             Submit
+          </button>
+        </form>
+      )}
+
+      {canVetApprove && (
+        <form action={vetApproveAction} onSubmit={confirming("Approve this quotation? Status will move to Approved.")}>
+          <input type="hidden" name="id" value={quotationId} />
+          <button
+            type="submit"
+            className="rounded-pill bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          >
+            Approve
           </button>
         </form>
       )}

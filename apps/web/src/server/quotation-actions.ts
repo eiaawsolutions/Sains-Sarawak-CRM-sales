@@ -18,6 +18,7 @@ import {
   submit as validateSubmit,
   markSent as validateMarkSent,
   reject as validateReject,
+  vetApprove as validateVetApprove,
   type Actor,
   type QuotationState,
   type RoleCode,
@@ -119,6 +120,44 @@ export async function submitQuotation(formData: FormData): Promise<void> {
     reason: outcome === QuotationStatus.Approved
       ? `total ${q.totalMyr} MYR < ${AUTO_APPROVAL_THRESHOLD_MYR} threshold`
       : `total ${q.totalMyr} MYR >= ${AUTO_APPROVAL_THRESHOLD_MYR} threshold`,
+  });
+
+  redirect(`/quotations/${id}`);
+}
+
+/* ---------- QUO-VA-003/004/005: Section Head vet & approve ---------- */
+
+export async function vetApproveQuotation(formData: FormData): Promise<void> {
+  await ensureBootstrapped();
+  const id = String(formData.get("id") ?? "");
+  const { session, actor, state } = await loadActorAndQuotation(id);
+
+  const gate = validateVetApprove(state, actor);
+  if (!gate.ok) {
+    await writeAudit({
+      eventType: "quotation.vet_approve.denied", actorUserId: actor.userId,
+      actorRoleId: session.user.roleId, targetId: id,
+      before: { status: state.status }, after: null, outcome: "denied", reason: gate.message,
+    });
+    throw new Error(gate.message);
+  }
+
+  const now = new Date();
+  await db.update(schema.quotations)
+    .set({
+      statusId: QuotationStatus.Approved,
+      approvedAt: now,
+      approvedByUserId: actor.userId,
+      updatedAt: now,
+    })
+    .where(eq(schema.quotations.id, id));
+
+  await writeAudit({
+    eventType: "quotation.vet_approved", actorUserId: actor.userId,
+    actorRoleId: session.user.roleId, targetId: id,
+    before: { status: state.status },
+    after: { status: QuotationStatus.Approved },
+    outcome: "success",
   });
 
   redirect(`/quotations/${id}`);

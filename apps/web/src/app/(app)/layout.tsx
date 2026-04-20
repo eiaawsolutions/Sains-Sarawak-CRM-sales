@@ -12,6 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const role = session.user.roleCode;
   const isAdmin = role === "Administrator";
+  const isVetter = ["SectionHead", "UnitHead", "Director", "Administrator"].includes(role);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -26,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <NavLink href="/leads">Leads</NavLink>
             <NavLink href="/proposals">Proposals</NavLink>
             <NavLink href="/quotations">Quotations</NavLink>
+            {isVetter && <NavLink href="/quotations/approval">Approval Quotation</NavLink>}
             <NavLink href="/reports">Reports</NavLink>
             <NavLink href="/docs">Docs</NavLink>
             {isAdmin && <NavLink href="/admin/uat">UAT</NavLink>}
