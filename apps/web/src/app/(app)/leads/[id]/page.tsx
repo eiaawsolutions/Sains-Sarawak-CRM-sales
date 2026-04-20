@@ -205,6 +205,15 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <p className="whitespace-pre-wrap text-sm">{lead.notes ?? <span className="text-charcoal-faint">(no notes)</span>}</p>
       </section>
 
+      <section className="mt-6 rounded-lg border border-hairline bg-gradient-surface p-5 shadow-claritas-1">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-charcoal-soft">System information</h2>
+        <dl className="grid grid-cols-3 gap-4 text-sm">
+          <Row k="Created Date" v={lead.createdAt?.toLocaleString()} />
+          <Row k="Created By" v={owner?.fullName ?? "—"} />
+          <Row k="Last Updated" v={lead.updatedAt?.toLocaleString()} />
+        </dl>
+      </section>
+
       <div className="mt-6 grid grid-cols-2 gap-6">
         <section className="rounded-lg border border-hairline bg-gradient-surface p-5 shadow-claritas-1">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-charcoal-soft">Proposals ({leadProposals.length})</h2>
