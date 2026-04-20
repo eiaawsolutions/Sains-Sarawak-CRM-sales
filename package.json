@@ -1,0 +1,19 @@
+{
+  "name": "sains-sarawak-crm-sales",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo root. The web app lives in apps/web. This root package.json exists so Railway's Railpack builder can detect a Node project and honour the root-level nixpacks.toml; the install/build/start commands delegate to apps/web.",
+  "scripts": {
+    "install:web": "cd apps/web && npm ci --include=dev --no-audit --no-fund",
+    "build": "cd apps/web && npm run build",
+    "start": "cd apps/web && npm run start",
+    "dev": "cd apps/web && npm run dev",
+    "test": "cd apps/web && npm run test",
+    "railway:redeploy": "node scripts/railway-redeploy.mjs",
+    "railway:status": "railway service status --all",
+    "railway:logs": "railway logs --service web --build --lines 100"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

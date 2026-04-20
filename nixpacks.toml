@@ -1,0 +1,17 @@
+# Root-level Nixpacks config for Railway.
+# Railpack (the new default builder) scans only the repo root for build config;
+# keeping the real app in apps/web/ means we have to cd in during each phase.
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["cd apps/web && npm ci --include=dev --no-audit --no-fund"]
+
+[phases.build]
+# db:generate is skipped here — it needs DATABASE_URL which Railway only injects at runtime.
+# Additive migrations bootstrap on first request via src/db/bootstrap.ts.
+cmds = ["cd apps/web && npm run build"]
+
+[start]
+cmd = "cd apps/web && npm run start"
