@@ -1,15 +1,24 @@
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
+import { FilterBar } from "./filter-bar";
+import { Pagination } from "./pagination";
+import { buildClosedWhere, parseFilters, parsePage, DEFAULT_PAGE_SIZE } from "./filters";
+
+type SearchParams = Record<string, string | string[] | undefined>;
 
 /**
- * FSD §3.6.1 — Quotation Performance Report. Four views:
- *   1. Status Summary          — count + MYR by status
- *   2. Rejected Breakdown      — count by rejection reason
- *   3. Submission / Revision   — revision depth per root quotation
- *   4. Closed Overview         — closed quotations with total value
- * Export: Excel + PDF.
+ * FSD §3.6.1 — Quotation Performance Report.
+ * UAT coverage: QPR-01 view · QPR-02/03 filters (up to 5 rows) · QPR-04 pagination ·
+ * QPR-05 XLSX+PDF download · QPR-06/07 Proposal column.
  */
-export default async function ReportsPage() {
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
+  const filters = parseFilters(params);
+  const page = parsePage(params);
+  const pageSize = DEFAULT_PAGE_SIZE;
+  const offset = (page - 1) * pageSize;
+  const where = buildClosedWhere(filters);
+
   const statusRows = (await db.execute(sql`
     SELECT qs.name AS status_name, COUNT(q.id)::int AS quotation_count,
            COALESCE(SUM(q.total_myr), 0)::numeric AS total_value_myr
@@ -35,13 +44,46 @@ export default async function ReportsPage() {
     LIMIT 25
   `)) as unknown as Array<{ root: string; latest_no: string; revision_count: number }>;
 
+  const closedTotalRow = (await db.execute(sql`
+    SELECT COUNT(*)::int AS n
+    FROM crm.quotations q
+    LEFT JOIN crm.quotation_statuses qs ON qs.id = q.status_id
+    LEFT JOIN crm.accounts a ON a.id = q.account_id
+    LEFT JOIN crm.users u ON u.id = q.owner_user_id
+    LEFT JOIN crm.proposals p ON p.id = q.proposal_id
+    WHERE ${where}
+  `)) as unknown as Array<{ n: number }>;
+  const totalRows = closedTotalRow[0]?.n ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
   const closedRows = (await db.execute(sql`
-    SELECT quotation_no, total_myr, closed_at
-    FROM crm.quotations
-    WHERE status_id = 5
-    ORDER BY closed_at DESC NULLS LAST
-    LIMIT 25
-  `)) as unknown as Array<{ quotation_no: string; total_myr: string; closed_at: string | null }>;
+    SELECT q.quotation_no, q.total_myr, q.closed_at,
+           a.organization_name AS customer_name,
+           u.full_name AS owner_name,
+           p.proposal_no AS proposal_no
+    FROM crm.quotations q
+    LEFT JOIN crm.quotation_statuses qs ON qs.id = q.status_id
+    LEFT JOIN crm.accounts a ON a.id = q.account_id
+    LEFT JOIN crm.users u ON u.id = q.owner_user_id
+    LEFT JOIN crm.proposals p ON p.id = q.proposal_id
+    WHERE ${where}
+    ORDER BY q.closed_at DESC NULLS LAST
+    LIMIT ${pageSize} OFFSET ${offset}
+  `)) as unknown as Array<{
+    quotation_no: string;
+    total_myr: string;
+    closed_at: string | null;
+    customer_name: string | null;
+    owner_name: string | null;
+    proposal_no: string | null;
+  }>;
+
+  const exportQs = new URLSearchParams();
+  for (const f of filters) {
+    exportQs.append("f", f.field);
+    exportQs.append("v", f.value);
+  }
+  const qs = exportQs.toString() ? `?${exportQs.toString()}` : "";
 
   return (
     <div>
@@ -51,14 +93,24 @@ export default async function ReportsPage() {
           <p className="mt-1 text-sm text-charcoal-soft">FSD §3.6.1 — consolidated monitoring. Excel + PDF exports below.</p>
         </div>
         <div className="flex gap-3">
-          <a href="/api/reports/quotation-performance/xlsx" className="rounded-pill border border-hairline px-5 py-2.5 font-medium hover:border-crimson hover:text-crimson">
+          <a
+            href={`/api/reports/quotation-performance/xlsx${qs}`}
+            className="rounded-pill border border-hairline px-5 py-2.5 font-medium hover:border-crimson hover:text-crimson"
+          >
             Download XLSX
           </a>
-          <a href="/api/reports/quotation-performance/pdf" className="rounded-pill bg-gradient-accent px-5 py-2.5 font-semibold text-white shadow-accent-glow">
+          <a
+            href={`/api/reports/quotation-performance/pdf${qs}`}
+            className="rounded-pill bg-gradient-accent px-5 py-2.5 font-semibold text-white shadow-accent-glow"
+          >
             Download PDF
           </a>
         </div>
       </header>
+
+      <div className="mb-6">
+        <FilterBar />
+      </div>
 
       <div className="grid grid-cols-2 gap-6">
         <section className="rounded-lg border border-hairline bg-gradient-surface p-0 shadow-claritas-1">
@@ -111,24 +163,39 @@ export default async function ReportsPage() {
           </table>
         </section>
 
-        <section className="rounded-lg border border-hairline bg-gradient-surface p-0 shadow-claritas-1">
+        <section className="col-span-2 rounded-lg border border-hairline bg-gradient-surface p-0 shadow-claritas-1">
           <h2 className="px-4 pt-4 text-lg font-semibold">Closed Quotations Overview</h2>
-          <p className="px-4 pb-2 text-xs text-charcoal-soft">Top 25 most recent customer-accepted quotations.</p>
+          <p className="px-4 pb-2 text-xs text-charcoal-soft">
+            Customer-accepted quotations. {filters.length > 0 ? `Filtered by ${filters.length} rule${filters.length > 1 ? "s" : ""}.` : "Showing all closed."}
+          </p>
           <table className="data-table">
-            <thead><tr><th>Quotation No</th><th className="text-right">Total (MYR)</th><th>Closed</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Quotation No</th>
+                <th>Proposal</th>
+                <th>Customer</th>
+                <th>Owner</th>
+                <th className="text-right">Total (MYR)</th>
+                <th>Closed</th>
+              </tr>
+            </thead>
             <tbody>
               {closedRows.length === 0 && (
-                <tr><td colSpan={3} className="py-6 text-center text-charcoal-faint">No closed quotations yet.</td></tr>
+                <tr><td colSpan={6} className="py-6 text-center text-charcoal-faint">No results for these filters.</td></tr>
               )}
               {closedRows.map(r => (
                 <tr key={r.quotation_no}>
                   <td className="font-mono text-xs">{r.quotation_no}</td>
+                  <td className="font-mono text-xs">{r.proposal_no ?? "—"}</td>
+                  <td>{r.customer_name ?? "—"}</td>
+                  <td>{r.owner_name ?? "—"}</td>
                   <td className="text-right font-semibold">{Number(r.total_myr).toLocaleString()}</td>
                   <td className="text-charcoal-soft text-xs">{r.closed_at ? new Date(r.closed_at).toLocaleDateString() : "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <Pagination page={page} totalPages={totalPages} totalRows={totalRows} />
         </section>
       </div>
     </div>
