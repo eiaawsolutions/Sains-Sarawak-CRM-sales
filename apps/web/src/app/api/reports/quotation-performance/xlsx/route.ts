@@ -20,9 +20,21 @@ export async function GET() {
     GROUP BY rr.id, rr.name ORDER BY rr.id
   `)) as unknown as Array<{ reason: string; count: number; total: string }>;
 
+  const revisions = (await db.execute(sql`
+    SELECT MAX(quotation_no) AS latest_no, COUNT(*)::int AS revisions
+    FROM crm.quotations GROUP BY root_quotation_id ORDER BY revisions DESC
+  `)) as unknown as Array<{ latest_no: string; revisions: number }>;
+
+  const closed = (await db.execute(sql`
+    SELECT quotation_no, total_myr, closed_at
+    FROM crm.quotations WHERE status_id = 5 ORDER BY closed_at DESC NULLS LAST
+  `)) as unknown as Array<{ quotation_no: string; total_myr: string; closed_at: string | null }>;
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(status), "Status Summary");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rejections), "Rejections");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(revisions), "Revisions");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(closed), "Closed");
 
   const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
   return new NextResponse(buf, {

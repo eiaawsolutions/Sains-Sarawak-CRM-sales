@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone", // Railway-friendly — ships a minimal runtime
+  outputFileTracingIncludes: {
+    "/docs/**": ["./src/content/docs/**"],
+  },
   experimental: {
     serverActions: { allowedOrigins: ["*"] },
   },

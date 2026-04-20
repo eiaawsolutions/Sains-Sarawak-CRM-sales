@@ -22,10 +22,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/leads" className="font-semibold tracking-tight">SAINS CRM Sales</Link>
           </div>
           <nav className="flex items-center gap-5 text-sm">
+            <NavLink href="/accounts">Accounts</NavLink>
             <NavLink href="/leads">Leads</NavLink>
-            <NavLink href="/quotations">Quotations</NavLink>
             <NavLink href="/proposals">Proposals</NavLink>
+            <NavLink href="/quotations">Quotations</NavLink>
             <NavLink href="/reports">Reports</NavLink>
+            <NavLink href="/docs">Docs</NavLink>
             {isAdmin && <NavLink href="/admin/uat">UAT</NavLink>}
             {isAdmin && <NavLink href="/admin">Admin</NavLink>}
             <form action={async () => { "use server"; await signOut({ redirectTo: "/" }); }}>
