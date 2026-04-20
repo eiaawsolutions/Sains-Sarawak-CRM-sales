@@ -144,6 +144,7 @@ export const users = crm.table("users", {
   jobTitle:      varchar("job_title", { length: 200 }),
   salutationId:  smallint("salutation_id").references(() => salutations.id),
   isActive:      boolean("is_active").notNull().default(true),
+  passwordHash:  varchar("password_hash", { length: 100 }),
   lastLoginAt:   timestamp("last_login_at", { withTimezone: true }),
   createdAt:     timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt:     timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

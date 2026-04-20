@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 export default async function QuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
-  if (!session?.user) redirect("/api/auth/signin");
+  if (!session?.user) redirect("/auth/signin");
 
   const q = await db.query.quotations.findFirst({ where: eq(schema.quotations.id, id) });
   if (!q) notFound();

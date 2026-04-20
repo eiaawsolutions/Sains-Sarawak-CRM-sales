@@ -10,7 +10,7 @@ import { redirect } from "next/navigation";
  */
 export default async function AccountsPage() {
   const session = await auth();
-  if (!session?.user) redirect("/api/auth/signin");
+  if (!session?.user) redirect("/auth/signin");
 
   const rows = await db
     .select({

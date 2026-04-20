@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session?.user) redirect("/api/auth/signin");
+  if (!session?.user) redirect("/auth/signin");
 
   const role = session.user.roleCode;
   const isAdmin = role === "Administrator";

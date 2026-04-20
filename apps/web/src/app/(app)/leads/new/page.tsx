@@ -9,7 +9,7 @@ import { db, schema } from "@/db";
  */
 export default async function NewLeadPage() {
   const session = await auth();
-  if (!session?.user) redirect("/api/auth/signin");
+  if (!session?.user) redirect("/auth/signin");
 
   const role = session.user.roleCode;
   if (!["AccountManager", "UnitHead", "SectionHead", "Administrator"].includes(role)) {

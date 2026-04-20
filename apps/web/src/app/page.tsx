@@ -13,7 +13,7 @@ export default function HomePage() {
           <span className="text-lg font-semibold tracking-tight">SAINS CRM Sales</span>
         </div>
         <Link
-          href="/api/auth/signin"
+          href="/auth/signin"
           className="inline-flex items-center gap-2 rounded-pill bg-gradient-accent px-6 py-3 font-semibold text-white shadow-accent-glow transition hover:bg-gradient-cta-hover"
         >
           Sign in with SAINS SSO
@@ -30,7 +30,7 @@ export default function HomePage() {
           trust layer.
         </p>
         <div className="mt-10 flex items-center justify-center gap-4">
-          <Link href="/api/auth/signin" className="rounded-pill bg-gradient-accent px-8 py-4 font-semibold text-white shadow-accent-glow transition hover:bg-gradient-cta-hover">
+          <Link href="/auth/signin" className="rounded-pill bg-gradient-accent px-8 py-4 font-semibold text-white shadow-accent-glow transition hover:bg-gradient-cta-hover">
             Get started
           </Link>
           <Link href="/docs" className="rounded-pill border border-hairline px-8 py-4 font-medium text-charcoal transition hover:border-crimson hover:text-crimson">

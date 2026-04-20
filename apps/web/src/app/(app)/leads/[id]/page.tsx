@@ -11,7 +11,7 @@ import { auth } from "@/lib/auth";
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
-  if (!session?.user) redirect("/api/auth/signin");
+  if (!session?.user) redirect("/auth/signin");
 
   const lead = await db.query.leads.findFirst({ where: eq(schema.leads.id, id) });
   if (!lead) notFound();

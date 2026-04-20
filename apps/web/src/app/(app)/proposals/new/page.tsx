@@ -9,7 +9,7 @@ import { asc, eq } from "drizzle-orm";
  */
 export default async function NewProposalPage({ searchParams }: { searchParams: Promise<{ leadId?: string }> }) {
   const session = await auth();
-  if (!session?.user) redirect("/api/auth/signin");
+  if (!session?.user) redirect("/auth/signin");
 
   const role = session.user.roleCode;
   if (!["AccountManager", "UnitHead", "SectionHead", "Administrator"].includes(role)) {

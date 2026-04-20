@@ -13,7 +13,7 @@ import { auth } from "@/lib/auth";
 export default async function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
-  if (!session?.user) redirect("/api/auth/signin");
+  if (!session?.user) redirect("/auth/signin");
 
   const proposal = await db.query.proposals.findFirst({ where: eq(schema.proposals.id, id) });
   if (!proposal) notFound();
