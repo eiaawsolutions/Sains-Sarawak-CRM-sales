@@ -49,3 +49,7 @@ node_modules/
 *.tmp
 *.bak
 *.swp
+
+# Local-only artifacts
+.archive-tmp/
+.claude/

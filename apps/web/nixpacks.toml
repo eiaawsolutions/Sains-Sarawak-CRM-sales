@@ -1,0 +1,15 @@
+# Nixpacks config — Railway uses this to build a minimal Node 20 image.
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "postgresql_16"]
+
+[phases.install]
+cmds = ["npm install --include=dev --no-audit --no-fund"]
+
+[phases.build]
+# db:generate is skipped here — it needs DATABASE_URL which Railway only injects at runtime.
+# Drizzle migrations run on first request via `db:push` (done post-deploy) instead.
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm run start"

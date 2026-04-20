@@ -1,0 +1,29 @@
+node_modules/
+.next/
+out/
+build/
+.turbo/
+dist/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Testing
+coverage/
+*.tsbuildinfo
+
+# Drizzle
+drizzle/meta/_journal.json.bak

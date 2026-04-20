@@ -15,11 +15,10 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/db/seed.ts",
-    "db:seed:uat": "tsx src/db/seed-uat.ts",
-    "postinstall": "drizzle-kit generate || true"
+    "db:seed:uat": "tsx src/db/seed-uat.ts"
   },
   "dependencies": {
-    "next": "15.1.2",
+    "next": "15.5.9",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "@auth/core": "0.37.3",
@@ -58,7 +57,7 @@
     "autoprefixer": "10.4.20",
     "postcss": "8.4.49",
     "eslint": "9.17.0",
-    "eslint-config-next": "15.1.2",
+    "eslint-config-next": "15.5.9",
     "vitest": "2.1.8",
     "@vitest/ui": "2.1.8",
     "drizzle-kit": "0.30.1",
