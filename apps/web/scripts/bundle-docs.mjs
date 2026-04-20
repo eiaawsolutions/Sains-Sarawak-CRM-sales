@@ -6,7 +6,16 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const src = path.resolve(process.cwd(), "..", "..", "docs");
+// Railway's Nixpacks build context is apps/web, so we keep a mirror copy inside it
+// (docs-src/). Falls back to ../../docs for local mono-repo builds.
+const candidates = [
+  path.resolve(process.cwd(), "docs-src"),
+  path.resolve(process.cwd(), "..", "..", "docs"),
+];
+let src;
+for (const c of candidates) {
+  try { await fs.access(c); src = c; break; } catch { /* try next */ }
+}
 const dst = path.resolve(process.cwd(), "src", "content", "docs");
 
 async function copyDir(from, to) {
@@ -23,11 +32,14 @@ async function copyDir(from, to) {
   }
 }
 
-try {
-  await fs.access(src);
-  await fs.rm(dst, { recursive: true, force: true });
-  await copyDir(src, dst);
-  console.log(`[bundle-docs] copied ${src} → ${dst}`);
-} catch (e) {
-  console.warn(`[bundle-docs] skipped: ${e.message}`);
+if (!src) {
+  console.warn("[bundle-docs] skipped: no docs source found");
+} else {
+  try {
+    await fs.rm(dst, { recursive: true, force: true });
+    await copyDir(src, dst);
+    console.log(`[bundle-docs] copied ${src} → ${dst}`);
+  } catch (e) {
+    console.warn(`[bundle-docs] failed: ${e.message}`);
+  }
 }
