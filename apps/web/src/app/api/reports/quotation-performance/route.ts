@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
-import { buildClosedWhere, parseFilters, parsePage, DEFAULT_PAGE_SIZE } from "../../../(app)/reports/filters";
+import { buildClosedWhere, parseFilters, parsePage, parsePageSize } from "../../../(app)/reports/filters";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
 
   const filters = parseFilters(req.nextUrl.searchParams);
   const page = parsePage(req.nextUrl.searchParams);
-  const offset = (page - 1) * DEFAULT_PAGE_SIZE;
+  const pageSize = parsePageSize(req.nextUrl.searchParams);
+  const offset = (page - 1) * pageSize;
   const where = buildClosedWhere(filters);
 
   const statusSummary = await db.execute(sql`
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
     LEFT JOIN crm.fund_sources fs ON fs.id = q.source_of_fund_id
     WHERE ${where}
     ORDER BY q.closed_at DESC
-    LIMIT ${DEFAULT_PAGE_SIZE} OFFSET ${offset}
+    LIMIT ${pageSize} OFFSET ${offset}
   `);
 
   return NextResponse.json({
@@ -70,9 +71,9 @@ export async function GET(req: NextRequest) {
     rejectionBreakdown,
     closedOverview,
     page,
-    pageSize: DEFAULT_PAGE_SIZE,
+    pageSize,
     total,
-    totalPages: Math.max(1, Math.ceil(total / DEFAULT_PAGE_SIZE)),
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
     filters,
     generatedAt: new Date().toISOString(),
     generatedByName: session.user.name ?? session.user.email,

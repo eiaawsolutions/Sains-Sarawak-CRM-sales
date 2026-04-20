@@ -29,6 +29,9 @@ const ALLOWED = new Set<FilterField>(FILTER_FIELDS.map(f => f.value));
 
 export const MAX_FILTER_ROWS = 5;
 export const DEFAULT_PAGE_SIZE = 25;
+export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+export const MAX_PAGE_SIZE = 100;
+export const XLSX_EXPORT_ROW_CAP = 50_000;
 
 export function parseFilters(params: URLSearchParams | Record<string, string | string[] | undefined>): FilterRow[] {
   const get = (k: string): string[] => {
@@ -53,6 +56,13 @@ export function parsePage(params: URLSearchParams | Record<string, string | stri
   const raw = params instanceof URLSearchParams ? params.get("page") : (params as Record<string, unknown>)["page"];
   const n = Number(Array.isArray(raw) ? raw[0] : raw);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
+}
+
+export function parsePageSize(params: URLSearchParams | Record<string, string | string[] | undefined>): number {
+  const raw = params instanceof URLSearchParams ? params.get("pageSize") : (params as Record<string, unknown>)["pageSize"];
+  const n = Number(Array.isArray(raw) ? raw[0] : raw);
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_PAGE_SIZE;
+  return Math.min(MAX_PAGE_SIZE, Math.max(1, Math.floor(n)));
 }
 
 /** Build a SQL predicate for the closed-quotations query. Safe — parameters bound via drizzle sql`` tag. */

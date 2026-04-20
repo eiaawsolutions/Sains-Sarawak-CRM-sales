@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { PAGE_SIZE_OPTIONS } from "./filters";
 
-export function Pagination({ page, totalPages, totalRows }: { page: number; totalPages: number; totalRows: number }) {
+export function Pagination({ page, pageSize, totalPages, totalRows }: { page: number; pageSize: number; totalPages: number; totalRows: number }) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -13,6 +14,13 @@ export function Pagination({ page, totalPages, totalRows }: { page: number; tota
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const changePageSize = (n: number) => {
+    const params = new URLSearchParams(sp.toString());
+    params.set("pageSize", String(n));
+    params.set("page", "1");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   const prev = Math.max(1, page - 1);
   const next = Math.min(totalPages, page + 1);
   const disableBack = page <= 1;
@@ -20,9 +28,19 @@ export function Pagination({ page, totalPages, totalRows }: { page: number; tota
 
   return (
     <div className="mt-3 flex items-center justify-between border-t border-hairline px-4 py-3 text-xs">
-      <span className="text-charcoal-soft">
-        Page <strong>{page}</strong> of {totalPages} · {totalRows} total
-      </span>
+      <div className="flex items-center gap-3 text-charcoal-soft">
+        <span>Page <strong>{page}</strong> of {totalPages} · {totalRows} total</span>
+        <label className="flex items-center gap-1">
+          <span>Rows</span>
+          <select
+            value={pageSize}
+            onChange={e => changePageSize(Number(e.target.value))}
+            className="rounded-md border border-hairline bg-white px-2 py-1 text-xs focus:border-crimson focus:outline-none"
+          >
+            {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+      </div>
       <div className="flex gap-1">
         <button
           type="button"

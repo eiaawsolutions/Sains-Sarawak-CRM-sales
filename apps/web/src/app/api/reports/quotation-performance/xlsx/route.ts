@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import * as XLSX from "xlsx";
-import { buildClosedWhere, parseFilters } from "../../../../(app)/reports/filters";
+import { buildClosedWhere, parseFilters, XLSX_EXPORT_ROW_CAP } from "../../../../(app)/reports/filters";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
     LEFT JOIN crm.proposals p ON p.id = q.proposal_id
     WHERE ${where}
     ORDER BY q.closed_at DESC NULLS LAST
+    LIMIT ${XLSX_EXPORT_ROW_CAP + 1}
   `)) as unknown as Array<{
     quotation_no: string;
     proposal_no: string | null;
@@ -52,7 +53,9 @@ export async function GET(req: NextRequest) {
     closed_at: string | null;
   }>;
 
-  const closedSheet = closed.map(r => ({
+  const truncated = closed.length > XLSX_EXPORT_ROW_CAP;
+  const closedSlice = truncated ? closed.slice(0, XLSX_EXPORT_ROW_CAP) : closed;
+  const closedSheet = closedSlice.map(r => ({
     "Quotation No": r.quotation_no,
     "Proposal No": r.proposal_no ?? "",
     "Customer": r.customer ?? "",
@@ -66,6 +69,13 @@ export async function GET(req: NextRequest) {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rejections), "Rejections");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(revisions), "Revisions");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(closedSheet), "Closed");
+
+  if (truncated) {
+    const notice = [{
+      "Notice": `Export capped at ${XLSX_EXPORT_ROW_CAP.toLocaleString()} rows. Narrow your filters to export the full dataset.`,
+    }];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(notice), "Notice");
+  }
 
   const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
   return new NextResponse(buf, {

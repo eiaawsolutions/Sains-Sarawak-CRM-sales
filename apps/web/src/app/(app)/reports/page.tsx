@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { FilterBar } from "./filter-bar";
 import { Pagination } from "./pagination";
-import { buildClosedWhere, parseFilters, parsePage, DEFAULT_PAGE_SIZE } from "./filters";
+import { buildClosedWhere, parseFilters, parsePage, parsePageSize } from "./filters";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -15,7 +15,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const params = await searchParams;
   const filters = parseFilters(params);
   const page = parsePage(params);
-  const pageSize = DEFAULT_PAGE_SIZE;
+  const pageSize = parsePageSize(params);
   const offset = (page - 1) * pageSize;
   const where = buildClosedWhere(filters);
 
@@ -195,7 +195,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               ))}
             </tbody>
           </table>
-          <Pagination page={page} totalPages={totalPages} totalRows={totalRows} />
+          <Pagination page={page} pageSize={pageSize} totalPages={totalPages} totalRows={totalRows} />
         </section>
       </div>
     </div>
