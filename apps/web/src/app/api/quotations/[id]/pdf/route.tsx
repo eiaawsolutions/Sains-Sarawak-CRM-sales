@@ -2,8 +2,24 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db";
 import { eq, asc } from "drizzle-orm";
-import { renderToBuffer, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { renderToBuffer, Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
 import React from "react";
+import fs from "node:fs";
+import path from "node:path";
+
+// @react-pdf v4 no longer ships resolvable Helvetica AFM data through the Next
+// bundler, which caused "Cannot read properties of undefined (reading 'unitsPerEm')"
+// on the Railway runtime. Register a real TTF from disk instead. The file is
+// shipped at apps/web/public/fonts/Inter-Regular.ttf and traced into the build.
+let fontRegistered = false;
+function ensureFont() {
+  if (fontRegistered) return;
+  const fontPath = path.join(process.cwd(), "public", "fonts", "Inter-Regular.ttf");
+  Font.register({ family: "Inter", src: fontPath });
+  fontRegistered = true;
+}
+// Disable hyphenation so we do not pull any extra runtime assets.
+Font.registerHyphenationCallback((word: string) => [word]);
 
 /**
  * FSD §3.2.6 — PDF generation of an approved (or draft) quotation.
@@ -13,6 +29,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  ensureFont();
 
   const q = await db.query.quotations.findFirst({ where: eq(schema.quotations.id, id) });
   if (!q) return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -49,7 +66,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 // -------- PDF document --------
 
 const styles = StyleSheet.create({
-  page: { padding: 48, fontSize: 10, fontFamily: "Helvetica", color: "#3f3f3f" },
+  page: { padding: 48, fontSize: 10, fontFamily: "Inter", color: "#3f3f3f" },
   headerBar: { borderBottomWidth: 2, borderBottomColor: "#721011", paddingBottom: 10, marginBottom: 18 },
   title: { fontSize: 20, fontWeight: 700, color: "#721011" },
   meta: { fontSize: 9, color: "#6b6b6b", marginTop: 4 },

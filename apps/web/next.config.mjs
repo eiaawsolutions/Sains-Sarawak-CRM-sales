@@ -4,6 +4,7 @@ const nextConfig = {
   output: "standalone", // Railway-friendly — ships a minimal runtime
   outputFileTracingIncludes: {
     "/docs/**": ["./src/content/docs/**"],
+    "/api/quotations/**": ["./public/fonts/**"],
   },
   experimental: {
     serverActions: { allowedOrigins: ["*"] },
