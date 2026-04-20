@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, inArray, asc } from "drizzle-orm";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -7,6 +7,8 @@ import { auth } from "@/lib/auth";
 /**
  * Lead detail — FSD §3.3.2. Shows lead info, related proposals/quotations, and provides
  * the "Prepare Proposal" action (step 6 decision) which hands off to /proposals/new?leadId=…
+ * Also supports direct quotation creation from the lead (LEAD-012/013) and owner
+ * reassignment by Supervisor/Section Head (LEAD-022..LEAD-027).
  */
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,6 +38,81 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
   const role = session.user.roleCode;
   const canAct = ["AccountManager", "UnitHead", "SectionHead", "Administrator"].includes(role);
+  const canReassign = ["UnitHead", "SectionHead", "Administrator"].includes(role);
+
+  // Eligible assignees for the re-assignment widget (Account Managers + Unit Heads)
+  const assignees = canReassign
+    ? await db
+        .select({ id: schema.users.id, fullName: schema.users.fullName, email: schema.users.email })
+        .from(schema.users)
+        .innerJoin(schema.roles, eq(schema.roles.id, schema.users.roleId))
+        .where(and(eq(schema.users.isActive, true), inArray(schema.roles.code, ["AccountManager", "UnitHead"])))
+        .orderBy(asc(schema.users.fullName))
+    : [];
+
+  async function createQuotationFromLead() {
+    "use server";
+    const s = await auth();
+    if (!s?.user.id) throw new Error("unauth");
+
+    const now = new Date();
+    const yr = now.getFullYear();
+    const ts = now.getTime().toString().slice(-7);
+    const quotationNo = `QTN-${yr}-${ts}`;
+    const ld = await db.query.leads.findFirst({ where: eq(schema.leads.id, id) });
+    if (!ld) throw new Error("lead_missing");
+    const acc = ld.accountId ? await db.query.accounts.findFirst({ where: eq(schema.accounts.id, ld.accountId) }) : null;
+    const newId = crypto.randomUUID();
+    await db.insert(schema.quotations).values({
+      id: newId,
+      quotationNo,
+      rootQuotationId: newId,
+      revisionLetter: "a",
+      accountId: acc?.id ?? null,
+      leadId: ld.id,
+      ownerUserId: s.user.id,
+      statusId: 1,
+      typeId: 1,
+      subject: `${ld.organizationName} — new quotation`,
+      snapOrganizationName: acc?.organizationName ?? ld.organizationName,
+      snapLine1: acc?.line1 ?? null,
+      snapLine2: acc?.line2 ?? null,
+      snapLine3: acc?.line3 ?? null,
+      snapCity: acc?.city ?? null,
+      snapPostcode: acc?.postcode ?? null,
+      snapStateCode: acc?.stateCode ?? null,
+      snapCountryCode: acc?.countryCode ?? "MY",
+      snapPhone: acc?.officePhone ?? null,
+      ownerDepartmentId: s.user.departmentId ?? null,
+      ownerSectionId: s.user.sectionId ?? null,
+    });
+    redirect(`/quotations/${newId}`);
+  }
+
+  async function reassignLead(formData: FormData) {
+    "use server";
+    const s = await auth();
+    if (!s?.user.id) throw new Error("unauth");
+    const r = s.user.roleCode;
+    if (!["UnitHead", "SectionHead", "Administrator"].includes(r)) throw new Error("forbidden");
+
+    const newOwnerId = String(formData.get("newOwnerUserId") ?? "").trim();
+    if (!newOwnerId) throw new Error("missing_owner");
+
+    const newOwner = await db.query.users.findFirst({ where: eq(schema.users.id, newOwnerId) });
+    if (!newOwner || !newOwner.isActive) throw new Error("invalid_owner");
+
+    await db.update(schema.leads)
+      .set({
+        ownerUserId: newOwner.id,
+        ownerDepartmentId: newOwner.departmentId ?? null,
+        ownerSectionId: newOwner.sectionId ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.leads.id, id));
+
+    redirect(`/leads/${id}?reassigned=1`);
+  }
 
   return (
     <div className="max-w-5xl">
@@ -49,20 +126,55 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <div>
           <h1 className="text-3xl font-semibold">{lead.organizationName}</h1>
           <p className="mt-1 text-sm text-charcoal-soft">
-            {status?.name ?? "?"} · Owner: {owner?.fullName ?? "—"}
+            Account Type: <strong className="text-charcoal">Lead</strong> · {status?.name ?? "?"} · Owner: {owner?.fullName ?? "—"}
           </p>
         </div>
         {canAct && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link
               href={`/proposals/new?leadId=${lead.id}`}
               className="rounded-pill bg-gradient-accent px-5 py-2.5 font-semibold text-white shadow-accent-glow"
             >
               + Prepare proposal
             </Link>
+            <form action={createQuotationFromLead}>
+              <button
+                type="submit"
+                className="rounded-pill border border-hairline bg-white px-5 py-2.5 font-semibold hover:border-crimson hover:text-crimson"
+              >
+                + Create quotation
+              </button>
+            </form>
           </div>
         )}
       </header>
+
+      {canReassign && (
+        <section className="mb-6 rounded-lg border border-hairline bg-white p-5 shadow-claritas-1">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-charcoal-soft">Re-assignment</h2>
+          <form action={reassignLead} className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[240px]">
+              <label className="mb-1.5 block text-xs font-medium text-charcoal-soft">Assign to user</label>
+              <select
+                name="newOwnerUserId"
+                required
+                defaultValue={lead.ownerUserId}
+                className="w-full rounded-md border border-hairline bg-white px-3 py-2 text-sm"
+              >
+                {assignees.map(a => (
+                  <option key={a.id} value={a.id}>{a.fullName} · {a.email}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="submit"
+              className="rounded-pill bg-gradient-accent px-5 py-2.5 text-sm font-semibold text-white shadow-accent-glow"
+            >
+              Re-assign
+            </button>
+          </form>
+        </section>
+      )}
 
       <div className="grid grid-cols-2 gap-6">
         <section className="rounded-lg border border-hairline bg-gradient-surface p-5 shadow-claritas-1">

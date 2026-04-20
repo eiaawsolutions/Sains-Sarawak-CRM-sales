@@ -1,19 +1,45 @@
 /**
- * UAT fixture — seeds one account (with two contacts), one lead, one proposal, and one
- * quotation so that the CUST-001..CUST-009 test script has data to observe. Idempotent:
- * re-runs overwrite the same fixture records identified by synthetic cmdRefIds / nos.
+ * UAT fixture — seeds:
+ *   - one sample Account Manager user (for re-assignment tests)
+ *   - one account (with two contacts)
+ *   - one lead, one proposal, one quotation (with 2 lines)
+ * Idempotent: re-runs overwrite the same fixture records by synthetic refs.
  */
 import { db, schema } from "./index";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 const TEST_EMAIL = process.env.TEST_EMAIL ?? "eiaawsolutions3097@gmail.com";
+const AM_EMAIL = process.env.AM_EMAIL ?? "uat-am@sains.local";
+const AM_PASSWORD = process.env.AM_PASSWORD ?? "AccountMgr!2026";
 const FIXTURE_CMD_REF_ID = "00000000-0000-0000-0000-000000000aaa";
 const FIXTURE_QUOTATION_NO = "UAT-QTN-2026-0001";
 const FIXTURE_PROPOSAL_NO = "UAT-PROP-2026-0001";
+const ROLE_AM = 2950;
 
 async function main() {
   const owner = await db.query.users.findFirst({ where: eq(schema.users.email, TEST_EMAIL) });
   if (!owner) throw new Error(`Test user ${TEST_EMAIL} missing; run db:seed:test-user first.`);
+
+  // ---------- Account Manager user for re-assignment ----------
+  const amHash = await bcrypt.hash(AM_PASSWORD, 10);
+  const existingAM = await db.query.users.findFirst({ where: eq(schema.users.email, AM_EMAIL) });
+  if (!existingAM) {
+    await db.insert(schema.users).values({
+      oidcSub: `credentials:${AM_EMAIL}`,
+      fullName: "UAT Account Manager",
+      email: AM_EMAIL,
+      roleId: ROLE_AM,
+      isActive: true,
+      passwordHash: amHash,
+    });
+    console.log(`[fixture] Created Account Manager user ${AM_EMAIL}`);
+  } else {
+    await db.update(schema.users)
+      .set({ passwordHash: amHash, isActive: true, roleId: ROLE_AM, updatedAt: new Date() })
+      .where(eq(schema.users.id, existingAM.id));
+    console.log(`[fixture] Updated Account Manager user ${AM_EMAIL}`);
+  }
 
   // ---------- Account ----------
   let account = await db.query.accounts.findFirst({
