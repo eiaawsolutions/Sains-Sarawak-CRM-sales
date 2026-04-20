@@ -2,9 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
-import { renderToBuffer, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { renderToBuffer, Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
 import React from "react";
+import path from "node:path";
 import { buildClosedWhere, parseFilters } from "../../../../(app)/reports/filters";
+
+// @react-pdf v4 no longer ships a resolvable Helvetica AFM through the Next bundler,
+// which causes "Cannot read properties of undefined (reading 'unitsPerEm')" on Railway.
+// Register the Inter TTF that is already shipped for the quotation PDF.
+let fontRegistered = false;
+function ensureFont() {
+  if (fontRegistered) return;
+  const fontPath = path.join(process.cwd(), "public", "fonts", "Inter-Regular.ttf");
+  Font.register({ family: "Inter", src: fontPath });
+  fontRegistered = true;
+}
+Font.registerHyphenationCallback((word: string) => [word]);
 
 type Status = { status: string; count: number; total: string };
 type Rejection = { reason: string; count: number };
@@ -21,6 +34,8 @@ type Closed = {
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  ensureFont();
 
   const filters = parseFilters(req.nextUrl.searchParams);
   const where = buildClosedWhere(filters);
@@ -72,7 +87,7 @@ export async function GET(req: NextRequest) {
 }
 
 const s = StyleSheet.create({
-  page: { padding: 36, fontSize: 10, fontFamily: "Helvetica", color: "#3f3f3f" },
+  page: { padding: 36, fontSize: 10, fontFamily: "Inter", color: "#3f3f3f" },
   h1: { fontSize: 18, fontWeight: 700, color: "#721011" },
   meta: { fontSize: 9, color: "#6b6b6b", marginTop: 2, marginBottom: 14 },
   h2: { fontSize: 11, fontWeight: 700, color: "#721011", marginTop: 16, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 },

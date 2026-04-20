@@ -5,6 +5,7 @@ const nextConfig = {
   outputFileTracingIncludes: {
     "/docs/**": ["./src/content/docs/**"],
     "/api/quotations/**": ["./public/fonts/**"],
+    "/api/reports/**": ["./public/fonts/**"],
   },
   experimental: {
     serverActions: { allowedOrigins: ["*"] },
