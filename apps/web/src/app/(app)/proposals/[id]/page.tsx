@@ -1,14 +1,15 @@
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 
 /**
- * Proposal detail + "Convert to Quotation" (FSD §3.4.3 Step 3). On convert:
- *  - Proposal status becomes 2 (Converted into Quotation)
- *  - A new Draft quotation is created linked to the proposal + lead
- *  - Proposal becomes read-only
+ * Proposal detail — two linkage paths:
+ *  1. Convert → creates a NEW Draft quotation tied to this proposal + flips proposal to Converted.
+ *  2. Link existing → attaches an existing unlinked quotation (same lead or same account) to this proposal.
+ * N:1 is supported via quotations.proposalId FK; the subpanel lists every quotation whose proposalId
+ * matches. The convertedQuotationId column is kept in sync with the first/primary linkage.
  */
 export default async function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,12 +26,47 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
   const status = await db.query.proposalStatuses.findFirst({ where: eq(schema.proposalStatuses.id, proposal.statusId) });
   const converted = proposal.statusId === 2;
 
-  const linkedQuotation = proposal.convertedQuotationId
-    ? await db.query.quotations.findFirst({ where: eq(schema.quotations.id, proposal.convertedQuotationId) })
-    : null;
+  const linkedQuotations = await db
+    .select({
+      id: schema.quotations.id,
+      quotationNo: schema.quotations.quotationNo,
+      statusId: schema.quotations.statusId,
+      totalMyr: schema.quotations.totalMyr,
+      subject: schema.quotations.subject,
+    })
+    .from(schema.quotations)
+    .where(eq(schema.quotations.proposalId, proposal.id))
+    .orderBy(asc(schema.quotations.createdAt));
+
+  const qStatuses = await db.select().from(schema.quotationStatuses);
+  const qStatusName = new Map(qStatuses.map(s => [s.id, s.name]));
+
+  const linkable = !converted
+    ? await db
+        .select({
+          id: schema.quotations.id,
+          quotationNo: schema.quotations.quotationNo,
+          subject: schema.quotations.subject,
+          statusId: schema.quotations.statusId,
+          totalMyr: schema.quotations.totalMyr,
+        })
+        .from(schema.quotations)
+        .where(
+          and(
+            isNull(schema.quotations.proposalId),
+            or(
+              lead?.id ? eq(schema.quotations.leadId, lead.id) : undefined,
+              lead?.accountId ? eq(schema.quotations.accountId, lead.accountId) : undefined,
+            ),
+          ),
+        )
+        .orderBy(asc(schema.quotations.createdAt))
+        .limit(50)
+    : [];
 
   const role = session.user.roleCode;
   const canConvert = !converted && ["AccountManager", "UnitHead", "SectionHead", "Administrator"].includes(role);
+  const canLink = canConvert;
 
   async function convertToQuotation() {
     "use server";
@@ -87,6 +123,39 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
     redirect(`/quotations`);
   }
 
+  async function linkExistingQuotation(formData: FormData) {
+    "use server";
+    const s = await auth();
+    if (!s?.user.id) throw new Error("unauth");
+    if (!["AccountManager", "UnitHead", "SectionHead", "Administrator"].includes(s.user.roleCode)) {
+      throw new Error("forbidden");
+    }
+
+    const quotationId = String(formData.get("quotationId") ?? "").trim();
+    if (!quotationId) throw new Error("Quotation is required");
+
+    const prop = await db.query.proposals.findFirst({ where: eq(schema.proposals.id, id) });
+    if (!prop || prop.statusId === 2) throw new Error("Proposal is read-only");
+
+    const target = await db.query.quotations.findFirst({ where: eq(schema.quotations.id, quotationId) });
+    if (!target) throw new Error("Quotation not found");
+    if (target.proposalId && target.proposalId !== id) {
+      throw new Error("Quotation is already linked to another proposal");
+    }
+
+    await db.update(schema.quotations)
+      .set({ proposalId: id, updatedAt: new Date() })
+      .where(eq(schema.quotations.id, quotationId));
+
+    if (!prop.convertedQuotationId) {
+      await db.update(schema.proposals)
+        .set({ convertedQuotationId: quotationId, updatedAt: new Date() })
+        .where(eq(schema.proposals.id, id));
+    }
+
+    redirect(`/proposals/${id}`);
+  }
+
   return (
     <div className="max-w-4xl">
       <nav className="mb-4 text-sm text-charcoal-soft">
@@ -113,9 +182,9 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
             <Row k="Owner" v={owner?.fullName ?? "—"} />
             <Row k="Created" v={proposal.createdAt?.toLocaleString()} />
             <Row k="Updated" v={proposal.updatedAt?.toLocaleString()} />
-            {linkedQuotation && (
-              <Row k="Converted Quotation" v={<Link href={`/quotations/${linkedQuotation.id}`} className="text-crimson hover:underline font-mono text-xs">{linkedQuotation.quotationNo}</Link>} />
-            )}
+            <Row k="Primary Quotation" v={proposal.convertedQuotationId
+              ? <Link href={`/quotations/${proposal.convertedQuotationId}`} className="text-crimson hover:underline font-mono text-xs">{linkedQuotations.find(q => q.id === proposal.convertedQuotationId)?.quotationNo ?? proposal.convertedQuotationId.slice(0, 8)}</Link>
+              : "—"} />
           </dl>
         </section>
 
@@ -124,6 +193,69 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
           <p className="whitespace-pre-wrap text-sm text-charcoal">{proposal.note ?? <span className="text-charcoal-faint">(no notes)</span>}</p>
         </section>
       </div>
+
+      <section className="mt-6 rounded-lg border border-hairline bg-white p-5 shadow-claritas-1">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Quotations ({linkedQuotations.length})</h2>
+          {canLink && linkable.length > 0 && (
+            <details className="relative">
+              <summary className="cursor-pointer list-none rounded-pill border border-hairline px-4 py-2 text-sm font-medium hover:border-crimson">
+                + Link existing quotation
+              </summary>
+              <form
+                action={linkExistingQuotation}
+                className="absolute right-0 z-10 mt-2 w-96 rounded-lg border border-hairline bg-white p-4 shadow-claritas-2"
+              >
+                <label className="mb-1.5 block text-sm font-medium text-charcoal-soft">
+                  Unlinked quotations for this {lead?.accountId ? "account" : "lead"}
+                </label>
+                <select name="quotationId" required className="w-full rounded-md border border-hairline bg-white px-3 py-2 text-sm">
+                  <option value="">— Select quotation —</option>
+                  {linkable.map(q => (
+                    <option key={q.id} value={q.id}>
+                      {q.quotationNo} — {qStatusName.get(q.statusId) ?? "?"} — {q.subject ?? "(no subject)"}
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-3 flex justify-end gap-2">
+                  <button type="submit" className="rounded-pill bg-gradient-accent px-5 py-2 text-sm font-semibold text-white shadow-accent-glow">
+                    Link
+                  </button>
+                </div>
+              </form>
+            </details>
+          )}
+        </div>
+
+        {linkedQuotations.length === 0 ? (
+          <p className="text-sm text-charcoal-faint">No quotations linked yet. Use Convert to create a new one, or Link existing to attach one.</p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Quotation No</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th className="text-right">Total (MYR)</th>
+                <th>Primary</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {linkedQuotations.map(q => (
+                <tr key={q.id}>
+                  <td className="font-mono text-xs">{q.quotationNo}</td>
+                  <td className="font-medium">{q.subject ?? "—"}</td>
+                  <td>{qStatusName.get(q.statusId) ?? "?"}</td>
+                  <td className="text-right font-mono">{Number(q.totalMyr ?? 0).toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td>{q.id === proposal.convertedQuotationId ? <span className="rounded-pill bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">Primary</span> : ""}</td>
+                  <td><Link href={`/quotations/${q.id}`} className="text-crimson hover:underline">Open →</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
 
       {canConvert && (
         <div className="mt-6 rounded-lg border border-hairline bg-white p-5 shadow-claritas-1">
