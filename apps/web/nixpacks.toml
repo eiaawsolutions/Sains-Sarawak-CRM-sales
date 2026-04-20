@@ -4,7 +4,7 @@
 nixPkgs = ["nodejs_20", "postgresql_16"]
 
 [phases.install]
-cmds = ["npm install --include=dev --no-audit --no-fund"]
+cmds = ["npm ci --include=dev --no-audit --no-fund"]
 
 [phases.build]
 # db:generate is skipped here — it needs DATABASE_URL which Railway only injects at runtime.
