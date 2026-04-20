@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db";
+import { ensureBootstrapped } from "@/db/bootstrap";
 
 export async function GET(
   _req: Request,
@@ -10,6 +11,7 @@ export async function GET(
   const { id, attachmentId } = await params;
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  await ensureBootstrapped();
 
   const row = await db.query.quotationAttachments.findFirst({
     where: and(

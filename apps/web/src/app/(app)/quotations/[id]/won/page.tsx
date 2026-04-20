@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db";
+import { ensureBootstrapped } from "@/db/bootstrap";
 import { QuotationStatus } from "@/server/quotation-state-machine";
 import { closeWonQuotation } from "@/server/quotation-actions";
 import { WonAttachmentForm } from "./won-form";
@@ -11,6 +12,7 @@ export default async function QuotationWonPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const session = await auth();
   if (!session?.user) redirect("/auth/signin");
+  await ensureBootstrapped();
 
   const q = await db.query.quotations.findFirst({ where: eq(schema.quotations.id, id) });
   if (!q) notFound();

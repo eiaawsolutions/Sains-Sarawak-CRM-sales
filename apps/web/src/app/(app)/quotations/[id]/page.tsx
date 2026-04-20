@@ -3,6 +3,7 @@ import { eq, asc, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { ensureBootstrapped } from "@/db/bootstrap";
 import { QuotationActionsBar } from "@/components/quotation-actions-bar";
 import { submitQuotation, markSentQuotation } from "@/server/quotation-actions";
 import { QuotationStatus } from "@/server/quotation-state-machine";
@@ -18,6 +19,7 @@ export default async function QuotationDetailPage({
   const sp = await searchParams;
   const session = await auth();
   if (!session?.user) redirect("/auth/signin");
+  await ensureBootstrapped();
 
   const q = await db.query.quotations.findFirst({ where: eq(schema.quotations.id, id) });
   if (!q) notFound();
