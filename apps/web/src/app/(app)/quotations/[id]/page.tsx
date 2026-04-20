@@ -3,6 +3,9 @@ import { eq, asc, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { QuotationActionsBar } from "@/components/quotation-actions-bar";
+import { submitQuotation, markSentQuotation } from "@/server/quotation-actions";
+import { QuotationStatus } from "@/server/quotation-state-machine";
 
 export default async function QuotationDetailPage({
   params,
@@ -24,6 +27,18 @@ export default async function QuotationDetailPage({
     .from(schema.quotationLines)
     .where(eq(schema.quotationLines.quotationId, id))
     .orderBy(asc(schema.quotationLines.lineOrder));
+
+  const attachments = await db
+    .select({
+      id: schema.quotationAttachments.id,
+      fileName: schema.quotationAttachments.fileName,
+      mimeType: schema.quotationAttachments.mimeType,
+      sizeBytes: schema.quotationAttachments.sizeBytes,
+      uploadedAt: schema.quotationAttachments.uploadedAt,
+    })
+    .from(schema.quotationAttachments)
+    .where(eq(schema.quotationAttachments.quotationId, id))
+    .orderBy(asc(schema.quotationAttachments.uploadedAt));
 
   const status = await db.query.quotationStatuses.findFirst({ where: eq(schema.quotationStatuses.id, q.statusId) });
   const type = await db.query.quotationTypes.findFirst({ where: eq(schema.quotationTypes.id, q.typeId) });
@@ -52,6 +67,12 @@ export default async function QuotationDetailPage({
   const role = session.user.roleCode;
   const isEditable = q.statusId === 1; // Only Draft quotations accept new line items
   const canEdit = isEditable && ["AccountManager", "UnitHead", "SectionHead", "Administrator"].includes(role);
+
+  const ownerOrAdmin = q.ownerUserId === session.user.id || role === "Administrator";
+  const hasLines = lines.length > 0;
+  const canSubmit     = ownerOrAdmin && q.statusId === QuotationStatus.Draft         && hasLines;
+  const canMarkSent   = ownerOrAdmin && q.statusId === QuotationStatus.Approved;
+  const canWinOrReject= ownerOrAdmin && q.statusId === QuotationStatus.QuotationSent;
 
   async function addQuotationLine(formData: FormData) {
     "use server";
@@ -139,16 +160,19 @@ export default async function QuotationDetailPage({
             {q.quotationNo}  ·  Rev {q.revisionLetter}  ·  {type?.name}  ·  Owner {owner?.fullName}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-end gap-3">
           <span className="rounded-pill border border-hairline bg-white px-3 py-1 text-xs font-semibold">
             {status?.name ?? "?"}
           </span>
-          <a
-            href={`/api/quotations/${q.id}/pdf`}
-            className="rounded-pill bg-gradient-accent px-5 py-2.5 font-semibold text-white shadow-accent-glow"
-          >
-            Download PDF
-          </a>
+          <QuotationActionsBar
+            quotationId={q.id}
+            statusId={q.statusId}
+            canSubmit={canSubmit}
+            canMarkSent={canMarkSent}
+            canWinOrReject={canWinOrReject}
+            submitAction={submitQuotation}
+            markSentAction={markSentQuotation}
+          />
         </div>
       </header>
 
@@ -373,6 +397,33 @@ export default async function QuotationDetailPage({
               Formula: <code>Total = (Unit Price × Quantity − Discount) + Tax</code>. Quotation totals recalculate on save.
             </p>
           </form>
+        </section>
+      )}
+
+      {attachments.length > 0 && (
+        <section className="mt-6 rounded-lg border border-hairline bg-gradient-surface p-5 shadow-claritas-1">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-charcoal-soft">
+            Attachments ({attachments.length})
+          </h2>
+          <ul className="divide-y divide-hairline">
+            {attachments.map(a => (
+              <li key={a.id} className="flex items-center justify-between py-2 text-sm">
+                <div>
+                  <a
+                    href={`/api/quotations/${q.id}/attachments/${a.id}`}
+                    className="font-medium text-charcoal hover:text-crimson"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {a.fileName}
+                  </a>
+                  <div className="text-xs text-charcoal-faint">
+                    {a.mimeType}  ·  {(a.sizeBytes / 1024).toFixed(0)} KB  ·  {a.uploadedAt.toLocaleString()}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

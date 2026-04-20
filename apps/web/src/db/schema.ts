@@ -378,6 +378,22 @@ export const quotationLines = crm.table("quotation_lines", {
   ixQuot: index("ix_quotation_lines_quotation").on(t.quotationId, t.lineOrder),
 }));
 
+// Proof-of-win / acceptance docs attached when a quotation is marked Closed Won.
+// Per FSD: 1 file minimum, 5 maximum. Blob stored in Postgres (bytea) — volume is
+// tiny (<=5 per quotation) and Railway provides no object store out of the box.
+export const quotationAttachments = crm.table("quotation_attachments", {
+  id:            uuid("id").primaryKey().defaultRandom(),
+  quotationId:   uuid("quotation_id").notNull().references(() => quotations.id, { onDelete: "cascade" }),
+  fileName:      varchar("file_name", { length: 255 }).notNull(),
+  mimeType:      varchar("mime_type", { length: 100 }).notNull(),
+  sizeBytes:     integer("size_bytes").notNull(),
+  content:       text("content_b64").notNull(),   // base64-encoded; drizzle bytea support is uneven
+  uploadedByUserId: uuid("uploaded_by_user_id").notNull().references(() => users.id),
+  uploadedAt:    timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => ({
+  ixQuot: index("ix_quotation_attachments_quotation").on(t.quotationId, t.uploadedAt),
+}));
+
 // ---------- Webhook ledger + audit log ----------
 
 export const cmdWebhookLedger = crm.table("cmd_webhook_ledger", {
