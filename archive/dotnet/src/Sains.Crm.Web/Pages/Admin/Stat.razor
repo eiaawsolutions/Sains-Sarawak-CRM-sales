@@ -1,0 +1,12 @@
+@namespace Sains.Crm.Web.Pages.Admin
+
+<div class="surface" style="padding: var(--space-4); text-align: center;">
+    <div style="font-size: var(--fs-xs); color: var(--color-fg-soft); text-transform: uppercase; letter-spacing: 0.06em;">@Label</div>
+    <div style="font-size: var(--fs-3xl); font-weight: 600; color: @(Color ?? "var(--color-fg)"); margin-top: var(--space-1);">@Value</div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public string? Color { get; set; }
+}

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Sains.Crm.Agents</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Sains.Crm.Application\Sains.Crm.Application.csproj" />
+    <ProjectReference Include="..\Sains.Crm.Mcp\Sains.Crm.Mcp.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Anthropic.SDK" Version="5.2.0" />
+    <PackageReference Include="AWSSDK.BedrockRuntime" Version="3.7.416.3" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+</Project>

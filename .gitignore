@@ -1,0 +1,51 @@
+# ASP.NET / dotnet
+bin/
+obj/
+out/
+publish/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+*.dll
+*.pdb
+*.exe
+
+# Secrets (never commit)
+appsettings.Local.json
+appsettings.*.Local.json
+*.env
+.env
+.env.*
+secrets.json
+user-secrets/
+
+# Logs + test results
+**/TestResults/
+logs/
+*.log
+*.trx
+coverage.cobertura.xml
+.coverage
+coverage/
+
+# Build outputs
+artifacts/
+Debug/
+Release/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Package managers
+packages/
+node_modules/
+*.nupkg
+
+# Temp / scratch
+*.tmp
+*.bak
+*.swp

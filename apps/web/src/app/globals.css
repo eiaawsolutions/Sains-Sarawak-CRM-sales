@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Focus ring — WCAG AA, Claritas crimson */
+:focus-visible {
+  @apply outline-none ring-2 ring-crimson/60 ring-offset-2 ring-offset-white rounded-sm;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Data-table base — used across Leads / Quotations / UAT matrix */
+.data-table {
+  @apply w-full text-sm border-collapse;
+}
+.data-table thead th {
+  @apply text-left px-4 py-3 bg-gradient-surface text-charcoal-soft font-semibold border-b-2 border-hairline;
+}
+.data-table tbody td {
+  @apply px-4 py-3 border-b border-hairline;
+}
+.data-table tbody tr:hover {
+  @apply bg-crimson-faint;
+}

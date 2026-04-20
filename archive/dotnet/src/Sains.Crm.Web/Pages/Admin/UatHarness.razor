@@ -1,0 +1,223 @@
+@page "/admin/uat"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "CanAdmin")]
+@using Microsoft.AspNetCore.Components.Web
+@using Sains.Crm.Application.Uat
+@using Sains.Crm.Domain.Uat
+@inject IUatRunner Runner
+@inject IUatRunStore RunStore
+@inject IUatCaseStore CaseStore
+
+<PageTitle>UAT Harness · SAINS CRM</PageTitle>
+
+<div class="hero" style="padding: var(--space-8);">
+    <h1 style="font-size: var(--fs-3xl); margin:0 0 var(--space-2) 0;">UAT Test Harness</h1>
+    <p style="margin:0; color: var(--color-fg-soft); max-width: 860px;">
+        Automatic execution of the 179 test cases from
+        <strong>(Revise) SAINS CRM – Full System Test Scripts 1.0 – feedback by SAINS.xlsx</strong>.
+        Each run scores pass / fail / skip and reconciles against the SAINS baseline.
+        Manual cases (UI-driven steps humans still perform) are skipped by design — only HTTP probes
+        and SQL assertions execute today.
+    </p>
+</div>
+
+<div style="max-width: 1200px; margin: var(--space-6) auto; padding: 0 var(--space-8);">
+
+    <div class="surface" style="margin-bottom: var(--space-6);">
+        <div style="display:flex; gap: var(--space-4); align-items:center; flex-wrap: wrap;">
+            <button class="cta-primary" @onclick="@(() => RunAsync(null))" disabled="@_running">
+                @(_running ? "Running…" : "Run all modules")
+            </button>
+            <select @bind="_moduleFilter" class="cta-secondary" style="padding: var(--space-2) var(--space-4);">
+                <option value="">All modules</option>
+                <option>Auth</option>
+                <option>Customer</option>
+                <option>Lead</option>
+                <option>Quotation</option>
+                <option>Proposal</option>
+                <option>Admin</option>
+                <option>Reporting</option>
+            </select>
+            <button class="cta-secondary" @onclick="RunFilteredAsync" disabled="@_running">
+                Run selected module
+            </button>
+            <span style="color: var(--color-fg-soft); font-size: var(--fs-sm);">
+                @if (_latest is not null)
+                {
+                    <span>Latest run: <strong>@_latest.StartedAt.ToLocalTime():yyyy-MM-dd HH:mm</strong> · score <strong style="color: var(--color-accent);">@(_latest.ScorePct?.ToString("0.0") ?? "–")%</strong></span>
+                }
+            </span>
+        </div>
+    </div>
+
+    @if (_currentDetail is not null)
+    {
+        <div class="surface" style="margin-bottom: var(--space-6);">
+            <div style="display:flex; gap: var(--space-6); align-items: baseline;">
+                <h2 style="margin:0;">Run @_currentDetail.Summary.RunId.ToString()[..8]</h2>
+                <span class="pill pill--@(PillClass(_currentDetail.Summary))">@_currentDetail.Summary.Status</span>
+                <span style="color: var(--color-fg-soft);">@_currentDetail.Summary.StartedAt.ToLocalTime():dd MMM HH:mm</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-4); margin-top: var(--space-4);">
+                <Stat Label="Total"  Value="@_currentDetail.Summary.TotalCases.ToString()" />
+                <Stat Label="Pass"   Value="@_currentDetail.Summary.PassCount.ToString()"  Color="#1e6a2f" />
+                <Stat Label="Fail"   Value="@_currentDetail.Summary.FailCount.ToString()"  Color="#721011" />
+                <Stat Label="Skip"   Value="@_currentDetail.Summary.SkipCount.ToString()"  Color="#6b6b6b" />
+                <Stat Label="Score"  Value="@(_currentDetail.Summary.ScorePct?.ToString("0.0") ?? "–")%"
+                      Color="#3f3f3f" />
+            </div>
+
+            <h3 style="margin-top: var(--space-6);">Test matrix (@_currentDetail.Cases.Count rows)</h3>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Test ID</th>
+                        <th>Module</th>
+                        <th>Scenario</th>
+                        <th>SAINS</th>
+                        <th>Harness</th>
+                        <th>Reconciliation</th>
+                        <th>Severity</th>
+                        <th>Latency</th>
+                        <th>Failure reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _currentDetail.Cases)
+                    {
+                        <tr>
+                            <td><code>@row.TestId</code></td>
+                            <td>@row.Module</td>
+                            <td>@row.Scenario</td>
+                            <td><span class="pill @PillForBaseline(row.SainsBaseline)">@row.SainsBaseline</span></td>
+                            <td><span class="pill @PillForOutcome(row.HarnessOutcome)">@row.HarnessOutcome</span></td>
+                            <td>
+                                @{
+                                    var (label, css) = ReconcileLabel(row.Reconciliation);
+                                }
+                                <span class="pill @css">@label</span>
+                            </td>
+                            <td>@row.Severity</td>
+                            <td>@(row.LatencyMs.HasValue ? row.LatencyMs + " ms" : "–")</td>
+                            <td style="color: var(--color-fg-soft); max-width: 320px;">@row.FailureReason</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <div class="surface">
+        <h3 style="margin-top:0;">Recent runs</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Started</th>
+                    <th>Trigger</th>
+                    <th>Pass</th>
+                    <th>Fail</th>
+                    <th>Skip</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in _recent)
+                {
+                    <tr>
+                        <td>@r.StartedAt.ToLocalTime():yyyy-MM-dd HH:mm</td>
+                        <td>@r.TriggerSource</td>
+                        <td>@r.PassCount</td>
+                        <td>@r.FailCount</td>
+                        <td>@r.SkipCount</td>
+                        <td>@(r.ScorePct?.ToString("0.0") ?? "–")%</td>
+                        <td><span class="pill pill--@(PillClass(r))">@r.Status</span></td>
+                        <td><button class="cta-secondary" @onclick="@(() => LoadDetailAsync(r.RunId))">Open</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+@code {
+    private bool _running;
+    private string _moduleFilter = "";
+    private UatRunSummary? _latest;
+    private IReadOnlyList<UatRunSummary> _recent = Array.Empty<UatRunSummary>();
+    private UatRunDetail? _currentDetail;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _latest = await RunStore.GetLatestAsync(CancellationToken.None);
+        _recent = await RunStore.ListRecentAsync(25, CancellationToken.None);
+        if (_latest is not null)
+            _currentDetail = await RunStore.GetDetailAsync(_latest.RunId, CancellationToken.None);
+    }
+
+    private async Task RunAsync(UatModule? filter)
+    {
+        _running = true;
+        try
+        {
+            var id = await Runner.RunAsync("manual_ui", null, filter, CancellationToken.None);
+            _currentDetail = await RunStore.GetDetailAsync(id, CancellationToken.None);
+            await RefreshAsync();
+        }
+        finally { _running = false; }
+    }
+
+    private async Task RunFilteredAsync()
+    {
+        UatModule? filter = Enum.TryParse<UatModule>(_moduleFilter, out var m) ? m : null;
+        await RunAsync(filter);
+    }
+
+    private async Task LoadDetailAsync(Guid runId)
+        => _currentDetail = await RunStore.GetDetailAsync(runId, CancellationToken.None);
+
+    private static string PillClass(UatRunSummary r) => r.Status switch
+    {
+        "completed" when r.FailCount == 0 => "approved",
+        "completed"                       => "rejected",
+        "running"                         => "vetting",
+        "aborted"                         => "rejected",
+        _                                 => "draft"
+    };
+
+    private static string PillForBaseline(string b) => b switch
+    {
+        "Pass" => "pill--approved",
+        "Fail" => "pill--rejected",
+        _      => "pill--draft"
+    };
+
+    private static string PillForOutcome(UatOutcome o) => o switch
+    {
+        UatOutcome.Pass   => "pill--approved",
+        UatOutcome.Fail   => "pill--rejected",
+        UatOutcome.Skip   => "pill--draft",
+        UatOutcome.Error  => "pill--rejected",
+        _                 => "pill--draft"
+    };
+
+    private static (string label, string css) ReconcileLabel(string r) => r switch
+    {
+        "Agree-Pass"         => ("✓ Agree", "pill--approved"),
+        "Agree-Fail"         => ("✗ Agree (both fail)", "pill--rejected"),
+        "Regression-Fixed"   => ("↑ Now passing", "pill--sent"),
+        "Regression-Broken"  => ("↓ Broke", "pill--rejected"),
+        "Skipped"            => ("— skipped", "pill--draft"),
+        "NotRun"             => ("— not run", "pill--draft"),
+        _                    => (r, "pill--draft")
+    };
+}
+

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Sains.Crm.Domain</RootNamespace>
+    <AssemblyName>Sains.Crm.Domain</AssemblyName>
+  </PropertyGroup>
+  <!-- Pure domain: zero outgoing deps. No EF, no ASP.NET, no libraries other than base. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Sains.Crm.Application"/>
+    <InternalsVisibleTo Include="Sains.Crm.UnitTests"/>
+  </ItemGroup>
+</Project>

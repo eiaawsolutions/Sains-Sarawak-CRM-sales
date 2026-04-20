@@ -1,0 +1,35 @@
+root = true
+
+[*]
+indent_style = space
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.cs]
+indent_size = 4
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# Naming
+dotnet_naming_rule.interfaces_begin_with_I.symbols = interfaces
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_symbols.interfaces.applicable_accessibilities = *
+dotnet_naming_rule.interfaces_begin_with_I.style = prefix_I
+dotnet_naming_style.prefix_I.required_prefix = I
+dotnet_naming_style.prefix_I.capitalization = pascal_case
+dotnet_naming_rule.interfaces_begin_with_I.severity = error
+
+# Code quality
+dotnet_diagnostic.CA1707.severity = none        # naming rules w/ underscores (allow for test method names)
+dotnet_diagnostic.IDE0005.severity = warning   # unused usings
+dotnet_diagnostic.CS8618.severity = error      # non-nullable property uninitialised
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_for_built_in_types = false:suggestion
+
+[*.{sql,md,yml,yaml,json}]
+indent_size = 2
+
+[*.{csproj,props,targets}]
+indent_size = 2

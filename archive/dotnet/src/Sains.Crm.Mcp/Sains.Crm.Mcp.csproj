@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Sains.Crm.Mcp</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Sains.Crm.Application\Sains.Crm.Application.csproj" />
+    <ProjectReference Include="..\Sains.Crm.Infrastructure\Sains.Crm.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,32 @@
+@namespace Sains.Crm.Web.Shared
+@inherits LayoutComponentBase
+
+<div class="hero">
+    <header style="display:flex;align-items:center;justify-content:space-between;padding: var(--space-6) var(--space-8);">
+        <div style="display:flex;align-items:center;gap: var(--space-3);">
+            <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
+                <circle cx="18" cy="18" r="16" fill="url(#g)" stroke="#3f3f3f" stroke-width="0.5"/>
+                <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#721011"/>
+                    <stop offset="100%" stop-color="#3f3f3f"/>
+                </linearGradient></defs>
+            </svg>
+            <strong style="font-size: var(--fs-lg); letter-spacing: -.01em;">SAINS CRM Sales</strong>
+        </div>
+        <nav style="display:flex;gap: var(--space-4);">
+            <a href="/leads">Leads</a>
+            <a href="/quotations">Quotations</a>
+            <a href="/reports">Reports</a>
+            <AuthorizeView Policy="CanAdmin"><Authorized><a href="/admin/uat">UAT</a></Authorized></AuthorizeView>
+            <a class="cta-secondary" href="/auth/fim/logout">Sign out</a>
+        </nav>
+    </header>
+</div>
+
+<main style="max-width: 1200px; margin: 0 auto; padding: var(--space-8);">
+    @Body
+</main>
+
+<footer style="padding: var(--space-6) var(--space-8); color: var(--color-fg-soft); font-size: var(--fs-xs); text-align:center;">
+    Claritas × EIAAW Solutions · SAINS Sarawak · v1.0
+</footer>

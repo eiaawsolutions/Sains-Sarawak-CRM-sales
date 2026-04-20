@@ -1,0 +1,18 @@
+@namespace Sains.Crm.Web
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Shared.MainLayout)">
+            <NotAuthorized>
+                <div class="hero">
+                    <h1>Sign-in required</h1>
+                    <p><a class="cta-primary" href="/auth/fim/challenge">Sign in with SAINS FIM</a></p>
+                </div>
+            </NotAuthorized>
+        </AuthorizeRouteView>
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(Shared.MainLayout)">
+            <p>Page not found.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

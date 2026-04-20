@@ -1,0 +1,201 @@
+/* ============================================================
+   Claritas design tokens — SAINS Sarawak CRM Sales
+   Source of truth: ~/.claude/projects/…/memory/claritas_branding.md
+   Locked 2026-04-20.
+   Pair with Phase 2H taste stack (ui-ux-pro-max + ckm-brand +
+   design-taste-frontend). This file must never drift.
+   ============================================================ */
+
+:root {
+  /* Canonical Claritas palette */
+  --color-bg:            #ffffff;    /* white — default background */
+  --color-fg:            #3f3f3f;    /* charcoal — text, headers, dark surfaces */
+  --color-accent:        #721011;    /* deep crimson — brand mark, CTAs, highlights */
+
+  /* Derived (for gradient layering — not flat fills) */
+  --color-fg-soft:       #6b6b6b;    /* charcoal 70% — secondary text */
+  --color-fg-faint:      #a6a6a6;    /* charcoal 40% — tertiary */
+  --color-accent-soft:   #9a2c2d;    /* crimson 70% */
+  --color-accent-faint:  #f4dcdc;    /* crimson 10% — hover rows, light bands */
+  --color-hairline:      rgba(63, 63, 63, 0.12);
+  --color-overlay:       rgba(63, 63, 63, 0.55);
+
+  /* Gradient recipes — use these, not flat accent */
+  --gradient-hero:       radial-gradient(circle at 20% 0%, #f4dcdc 0%, #ffffff 55%);
+  --gradient-accent:     linear-gradient(135deg, #721011 0%, #3f3f3f 100%);
+  --gradient-surface:    linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  --gradient-cta-hover:  linear-gradient(135deg, #9a2c2d 0%, #721011 100%);
+  --gradient-outline:    linear-gradient(135deg, rgba(114,16,17,0.18) 0%, rgba(63,63,63,0.18) 100%);
+
+  /* Typography */
+  --font-sans:           "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-serif:          "Source Serif 4", Georgia, serif;
+  --font-mono:           "JetBrains Mono", ui-monospace, Consolas, monospace;
+
+  /* Type scale */
+  --fs-xs:      0.75rem;   /* 12 */
+  --fs-sm:      0.875rem;  /* 14 */
+  --fs-base:    1rem;      /* 16 */
+  --fs-lg:      1.125rem;  /* 18 */
+  --fs-xl:      1.25rem;   /* 20 */
+  --fs-2xl:     1.5rem;    /* 24 */
+  --fs-3xl:     2rem;      /* 32 */
+  --fs-4xl:     2.75rem;   /* 44 */
+  --fs-5xl:     4rem;      /* 64 */
+
+  /* Spacing (8-pt rhythm) */
+  --space-1:    0.25rem;
+  --space-2:    0.5rem;
+  --space-3:    0.75rem;
+  --space-4:    1rem;
+  --space-6:    1.5rem;
+  --space-8:    2rem;
+  --space-12:   3rem;
+  --space-16:   4rem;
+  --space-24:   6rem;
+
+  /* Radius */
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  14px;
+  --radius-xl:  22px;
+  --radius-pill: 999px;
+
+  /* Elevation (subtle, never flashy) */
+  --shadow-1:   0 1px 2px rgba(63, 63, 63, 0.06), 0 1px 1px rgba(63, 63, 63, 0.04);
+  --shadow-2:   0 4px 10px rgba(63, 63, 63, 0.08), 0 2px 4px rgba(63, 63, 63, 0.04);
+  --shadow-3:   0 18px 36px rgba(63, 63, 63, 0.10), 0 6px 12px rgba(63, 63, 63, 0.06);
+  --shadow-accent-glow: 0 8px 24px rgba(114, 16, 17, 0.22);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0.0, 0.0, 1.0);
+  --ease-emphasised: cubic-bezier(0.2, 0.0, 0.1, 1.1);
+  --duration-fast: 120ms;
+  --duration-std:  220ms;
+  --duration-slow: 420ms;
+
+  /* Focus ring — WCAG AA */
+  --focus-ring:    0 0 0 3px rgba(114, 16, 17, 0.45);
+
+  /* z-index */
+  --z-toast:      1000;
+  --z-modal:      900;
+  --z-popover:    800;
+  --z-tooltip:    700;
+  --z-nav:        100;
+}
+
+/* Global reset bits */
+html, body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* CTA styling — use gradient layering, not flat crimson */
+.cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  background: var(--gradient-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: var(--shadow-accent-glow);
+  transition: transform var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-std) var(--ease-standard),
+              background var(--duration-std) var(--ease-standard);
+  cursor: pointer;
+}
+.cta-primary:hover { background: var(--gradient-cta-hover); transform: translateY(-1px); }
+.cta-primary:active { transform: translateY(0); }
+.cta-primary:focus-visible { outline: none; box-shadow: var(--focus-ring), var(--shadow-accent-glow); }
+
+.cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-bg);
+  color: var(--color-fg);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+  transition: all var(--duration-std) var(--ease-standard);
+}
+.cta-secondary:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.cta-secondary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Surface card — use gradient-surface, not flat grey */
+.surface {
+  background: var(--gradient-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-1);
+  transition: box-shadow var(--duration-std) var(--ease-standard);
+}
+.surface:hover { box-shadow: var(--shadow-2); }
+
+/* Hero band */
+.hero {
+  background: var(--gradient-hero);
+  padding: var(--space-24) var(--space-8);
+}
+
+/* Status pills — used heavily in Quotation / Lead lists */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+.pill--draft    { background: #f4f4f4;             color: var(--color-fg);        border-color: var(--color-hairline); }
+.pill--vetting  { background: #fff4e5;             color: #8a4b00;                border-color: rgba(138,75,0,0.2); }
+.pill--approved { background: #e8f5ea;             color: #1e6a2f;                border-color: rgba(30,106,47,0.2); }
+.pill--sent     { background: var(--color-accent-faint); color: var(--color-accent); border-color: rgba(114,16,17,0.2); }
+.pill--closed   { background: var(--gradient-accent); color: #fff; }
+.pill--rejected { background: #3f3f3f;             color: #fff; }
+
+/* Tables — clean hairlines, generous density */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.data-table th {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  background: var(--gradient-surface);
+  color: var(--color-fg-soft);
+  font-weight: 600;
+  border-bottom: 2px solid var(--color-hairline);
+}
+.data-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-hairline);
+}
+.data-table tbody tr:hover { background: var(--color-accent-faint); }
+
+/* Focus states — everywhere */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

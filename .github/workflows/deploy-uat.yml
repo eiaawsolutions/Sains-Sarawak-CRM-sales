@@ -1,0 +1,43 @@
+name: Deploy UAT
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: "Commit SHA to deploy (leave blank for latest main)"
+        required: false
+
+concurrency:
+  group: deploy-uat
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha || 'main' }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish Web host
+        run: dotnet publish src/Sains.Crm.Web/Sains.Crm.Web.csproj -c Release -o publish/web --self-contained false
+
+      - name: Publish MCP host (v1.1)
+        run: dotnet publish src/Sains.Crm.Mcp/Sains.Crm.Mcp.csproj -c Release -o publish/mcp --self-contained false
+
+      - name: Bundle DB migrations
+        run: |
+          New-Item -ItemType Directory -Force publish/db
+          Copy-Item db/migrations/*.sql publish/db -Force
+          Copy-Item db/seed/*.sql publish/db -Force
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm-uat-package
+          path: publish/

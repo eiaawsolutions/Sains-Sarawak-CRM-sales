@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore Sains.Crm.sln
+
+      - name: Build
+        run: dotnet build Sains.Crm.sln --configuration Release --no-restore
+
+      - name: Test (unit + policy)
+        run: dotnet test Sains.Crm.sln --configuration Release --no-build --filter "FullyQualifiedName!~IntegrationTests" --logger "trx;LogFileName=test.trx" --collect:"XPlat Code Coverage"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/TestResults/*.trx"
+
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          SA_PASSWORD: "yourStrong(!)Password"
+          MSSQL_PID: "Standard"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "sqlcmd -l 30 -S localhost -U sa -P yourStrong(!)Password -Q 'SELECT 1'"
+          --health-interval 15s
+          --health-timeout 15s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore + build
+        run: dotnet build Sains.Crm.sln --configuration Release
+
+      - name: Integration tests
+        run: dotnet test tests/Sains.Crm.IntegrationTests/Sains.Crm.IntegrationTests.csproj --configuration Release --no-build --logger "trx"
+        env:
+          ConnectionStrings__Crm: "Server=localhost,1433;Database=SainsCrm_It;User=sa;Password=yourStrong(!)Password;TrustServerCertificate=true;"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Audit dependencies
+        run: dotnet list Sains.Crm.sln package --vulnerable --include-transitive
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: CodeQL init
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+
+      - name: Build for CodeQL
+        run: dotnet build Sains.Crm.sln --configuration Release
+
+      - name: CodeQL analyze
+        uses: github/codeql-action/analyze@v3

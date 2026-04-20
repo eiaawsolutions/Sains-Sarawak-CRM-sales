@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "yourStrong(!)Password"
+      MSSQL_PID: "Standard"
+    ports: [ "1433:1433" ]
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'yourStrong(!)Password' -Q 'SELECT 1' || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  web:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+    depends_on:
+      mssql:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Crm: "Server=mssql,1433;Database=SainsCrm_Dev;User=sa;Password=yourStrong(!)Password;TrustServerCertificate=true;"
+    ports: [ "8080:8080" ]
+
+volumes:
+  mssql-data:
