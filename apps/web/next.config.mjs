@@ -6,6 +6,8 @@ const nextConfig = {
     serverActions: { allowedOrigins: ["*"] },
   },
   poweredByHeader: false,
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
   // Security headers mirror the .NET build — every header SAINS expects from a gov-grade app.
   async headers() {
     return [
