@@ -199,6 +199,46 @@ async function main() {
     console.log(`[fixture] Reusing quotation ${FIXTURE_QUOTATION_NO}`);
   }
 
+  // ---------- Products ----------
+  const existingProducts = await db.select().from(schema.products).limit(1);
+  if (existingProducts.length === 0) {
+    await db.insert(schema.products).values([
+      {
+        productCode: "CRM-PRO-LIC",
+        productName: "Claritas CRM Professional - user licence",
+        categoryId: 3,          // Software (seeded in seed.ts)
+        subCategoryId: null,
+        costPrice: "400.00",
+        retailPrice: "800.00",
+        defaultTaxPct: "8.00",
+        description: "Per-user annual licence, Professional edition.",
+      },
+      {
+        productCode: "SVC-IMPL",
+        productName: "Implementation & onboarding services",
+        categoryId: 4,          // Services
+        subCategoryId: null,
+        costPrice: "5000.00",
+        retailPrice: "10000.00",
+        defaultTaxPct: "8.00",
+        description: "Fixed-fee implementation package.",
+      },
+      {
+        productCode: "HW-PC-BASE",
+        productName: "Workstation PC (baseline)",
+        categoryId: 1,          // Hardware
+        subCategoryId: null,
+        costPrice: "2500.00",
+        retailPrice: "3800.00",
+        defaultTaxPct: "8.00",
+        description: "Baseline workstation for sales teams.",
+      },
+    ]);
+    console.log("[fixture] Inserted 3 products");
+  } else {
+    console.log("[fixture] Reusing existing products");
+  }
+
   console.log("[fixture] Done.");
   process.exit(0);
 }
