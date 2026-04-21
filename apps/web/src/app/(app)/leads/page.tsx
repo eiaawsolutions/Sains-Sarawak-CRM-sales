@@ -3,6 +3,9 @@ import { desc, asc, inArray, eq, and } from "drizzle-orm";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import {
+  Alert, Badge, Button, ButtonLink, Card, EmptyState, Field, PageHeader, Select,
+} from "@/components/ui";
 
 /**
  * Leads list (FSD §3.3). For Supervisor / Section Head / UnitHead / Administrator, each row
@@ -78,24 +81,21 @@ export default async function LeadsPage({
 
   return (
     <div>
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold">Leads</h1>
-          <p className="mt-1 text-sm text-charcoal-soft">Business opportunities. Lead → Proposal → Quotation → Customer.</p>
-        </div>
-        {canCreate && (
-          <Link
-            href="/leads/new"
-            className="inline-flex items-center gap-2 rounded-pill bg-gradient-accent px-6 py-3 font-semibold text-white shadow-accent-glow"
-          >
+      <PageHeader
+        title="Leads"
+        description="Business opportunities flowing through the Lead → Proposal → Quotation → Customer pipeline."
+        actions={canCreate ? (
+          <ButtonLink href="/leads/new" tone="primary" size="md">
             + New lead
-          </Link>
-        )}
-      </header>
+          </ButtonLink>
+        ) : null}
+      />
 
       {sp.reassigned === "1" && (
-        <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-900">
-          {sp.count ?? "1"} lead(s) re-assigned successfully.
+        <div className="mb-4">
+          <Alert tone="success">
+            {sp.count ?? "1"} lead(s) re-assigned successfully.
+          </Alert>
         </div>
       )}
 
@@ -107,6 +107,7 @@ export default async function LeadsPage({
             statusName={statusName}
             ownerName={ownerName}
             canReassign={canReassign}
+            canCreate={canCreate}
           />
         </form>
       ) : (
@@ -115,6 +116,7 @@ export default async function LeadsPage({
           statusName={statusName}
           ownerName={ownerName}
           canReassign={false}
+          canCreate={canCreate}
         />
       )}
     </div>
@@ -123,39 +125,48 @@ export default async function LeadsPage({
 
 function BulkActionBar({ assignees }: { assignees: { id: string; fullName: string }[] }) {
   return (
-    <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-hairline bg-white p-4 shadow-claritas-1">
-      <div>
-        <label className="mb-1.5 block text-xs font-medium text-charcoal-soft">Re-Assignment — select user</label>
-        <select
-          name="newOwnerUserId"
-          required
-          className="rounded-md border border-hairline bg-white px-3 py-2 text-sm min-w-[240px]"
-        >
-          <option value="">— Select Account Manager —</option>
-          {assignees.map(a => <option key={a.id} value={a.id}>{a.fullName}</option>)}
-        </select>
+    <Card className="mb-4" padded>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-[260px] flex-1 max-w-sm">
+          <Field label="Re-assign selected leads" htmlFor="newOwnerUserId">
+            <Select id="newOwnerUserId" name="newOwnerUserId" required>
+              <option value="">— Select Account Manager —</option>
+              {assignees.map(a => <option key={a.id} value={a.id}>{a.fullName}</option>)}
+            </Select>
+          </Field>
+        </div>
+        <Button type="submit" tone="primary" size="md">
+          Re-assign
+        </Button>
+        <p className="text-[11px] text-ink-faint">
+          Tick leads below, pick a user, then re-assign.
+        </p>
       </div>
-      <button
-        type="submit"
-        className="rounded-pill bg-gradient-accent px-5 py-2.5 text-sm font-semibold text-white shadow-accent-glow"
-      >
-        Action · Re-Assignment
-      </button>
-      <p className="text-xs text-charcoal-faint">Tick leads below, pick a user, click Action.</p>
-    </div>
+    </Card>
   );
 }
 
 function LeadsTable({
-  leads, statusName, ownerName, canReassign,
+  leads, statusName, ownerName, canReassign, canCreate,
 }: {
   leads: Array<{ id: string; organizationName: string; primaryContactName: string | null; statusId: number; source: string | null; createdAt: Date | null; ownerUserId: string }>;
   statusName: Map<number, string>;
   ownerName: Map<string, string>;
   canReassign: boolean;
+  canCreate: boolean;
 }) {
+  if (leads.length === 0) {
+    return (
+      <EmptyState
+        title="No leads yet"
+        description="Leads will appear here as account managers capture opportunities or as CMD forwards them to the pipeline."
+        action={canCreate ? <ButtonLink href="/leads/new" tone="primary" size="md">+ New lead</ButtonLink> : undefined}
+      />
+    );
+  }
+
   return (
-    <div className="rounded-lg border border-hairline bg-gradient-surface p-0 shadow-claritas-1">
+    <div className="overflow-hidden rounded-card border border-hairline bg-white">
       <table className="data-table">
         <thead>
           <tr>
@@ -170,21 +181,29 @@ function LeadsTable({
           </tr>
         </thead>
         <tbody>
-          {leads.length === 0 && (
-            <tr><td colSpan={canReassign ? 8 : 7} className="py-12 text-center text-charcoal-faint">No leads yet.</td></tr>
-          )}
           {leads.map(l => (
             <tr key={l.id}>
               {canReassign && (
-                <td><input type="checkbox" name="leadId" value={l.id} className="h-4 w-4 rounded border-hairline accent-crimson" /></td>
+                <td>
+                  <input
+                    type="checkbox"
+                    name="leadId"
+                    value={l.id}
+                    className="h-4 w-4 rounded border-hairline2 accent-accent"
+                  />
+                </td>
               )}
-              <td className="font-medium">{l.organizationName}</td>
-              <td>{l.primaryContactName ?? "—"}</td>
-              <td className="text-charcoal-soft">{ownerName.get(l.ownerUserId) ?? "—"}</td>
-              <td>{l.source ?? "—"}</td>
-              <td><Pill>{statusName.get(l.statusId) ?? "?"}</Pill></td>
-              <td className="text-charcoal-soft">{l.createdAt?.toLocaleDateString()}</td>
-              <td><Link href={`/leads/${l.id}`} className="text-crimson hover:underline">Open →</Link></td>
+              <td className="font-medium text-ink">{l.organizationName}</td>
+              <td className="text-ink-soft">{l.primaryContactName ?? "—"}</td>
+              <td className="text-ink-soft">{ownerName.get(l.ownerUserId) ?? "—"}</td>
+              <td className="text-ink-soft">{l.source ?? "—"}</td>
+              <td><StatusBadge status={statusName.get(l.statusId) ?? "—"} /></td>
+              <td className="text-ink-soft tabular-nums">{l.createdAt?.toLocaleDateString()}</td>
+              <td>
+                <Link href={`/leads/${l.id}`} className="text-sm font-medium text-accent hover:text-accent-deep transition-colors duration-sains ease-sains">
+                  Open →
+                </Link>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -193,6 +212,11 @@ function LeadsTable({
   );
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
-  return <span className="inline-flex items-center rounded-pill border border-hairline bg-white px-2.5 py-0.5 text-xs font-semibold">{children}</span>;
+function StatusBadge({ status }: { status: string }) {
+  const s = status.toLowerCase();
+  if (s.includes("won") || s.includes("customer"))        return <Badge tone="teal" dot>{status}</Badge>;
+  if (s.includes("lost") || s.includes("reject") || s.includes("close")) return <Badge tone="rose" dot>{status}</Badge>;
+  if (s.includes("propos") || s.includes("quot"))         return <Badge tone="accent" dot>{status}</Badge>;
+  if (s.includes("qual") || s.includes("review") || s.includes("hold")) return <Badge tone="gold" dot>{status}</Badge>;
+  return <Badge tone="neutral" dot>{status}</Badge>;
 }

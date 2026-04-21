@@ -3,6 +3,7 @@ import { asc } from "drizzle-orm";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { Badge, EmptyState, PageHeader } from "@/components/ui";
 
 /**
  * FSD §3.1 Contact Module — read-only mirror of SAINS CMD. CRM neither creates nor edits;
@@ -28,51 +29,53 @@ export default async function AccountsPage() {
 
   return (
     <div>
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold">Accounts &amp; Contacts</h1>
-          <p className="mt-1 text-sm text-charcoal-soft">
-            Read-only. Source of truth: SAINS CMD. Sync via webhook (FSD §3.1.2).
-          </p>
-        </div>
-        <span className="rounded-pill border border-hairline bg-white px-4 py-2 text-xs text-charcoal-soft">
-          {rows.length} records
-        </span>
-      </header>
+      <PageHeader
+        title="Accounts & Contacts"
+        description="Read-only. Source of truth: SAINS CMD. Sync via webhook (FSD §3.1.2)."
+        actions={
+          <Badge tone="neutral" dot>
+            {rows.length} records
+          </Badge>
+        }
+      />
 
-      <div className="rounded-lg border border-hairline bg-gradient-surface p-0 shadow-claritas-1">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Organization</th>
-              <th>Short name</th>
-              <th>Phone</th>
-              <th>City / State</th>
-              <th>Last synced (CMD)</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
+      {rows.length === 0 ? (
+        <EmptyState
+          title="No accounts synced yet"
+          description="Accounts are mirrored from SAINS CMD via webhook. They will appear here automatically."
+        />
+      ) : (
+        <div className="overflow-hidden rounded-card border border-hairline bg-white">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={6} className="py-12 text-center text-charcoal-faint">
-                  No accounts yet. CMD webhook will populate these automatically.
-                </td>
+                <th>Organization</th>
+                <th>Short name</th>
+                <th>Phone</th>
+                <th>City / State</th>
+                <th>Last synced (CMD)</th>
+                <th></th>
               </tr>
-            )}
-            {rows.map(a => (
-              <tr key={a.id}>
-                <td className="font-medium">{a.organizationName}</td>
-                <td className="text-charcoal-soft">{a.organizationShortName ?? "—"}</td>
-                <td className="font-mono text-xs">{a.officePhone ?? "—"}</td>
-                <td>{[a.city, a.stateCode].filter(Boolean).join(", ") || "—"}</td>
-                <td className="text-xs text-charcoal-soft">{a.cmdLastUpdated?.toLocaleString() ?? "—"}</td>
-                <td><Link href={`/accounts/${a.id}`} className="text-crimson hover:underline">Open →</Link></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map(a => (
+                <tr key={a.id}>
+                  <td className="font-medium text-ink">{a.organizationName}</td>
+                  <td className="text-ink-soft">{a.organizationShortName ?? "—"}</td>
+                  <td className="font-mono text-xs text-ink-soft">{a.officePhone ?? "—"}</td>
+                  <td className="text-ink-soft">{[a.city, a.stateCode].filter(Boolean).join(", ") || "—"}</td>
+                  <td className="text-xs text-ink-faint tabular-nums">{a.cmdLastUpdated?.toLocaleString() ?? "—"}</td>
+                  <td>
+                    <Link href={`/accounts/${a.id}`} className="text-sm font-medium text-accent hover:text-accent-deep transition-colors duration-sains ease-sains">
+                      Open →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

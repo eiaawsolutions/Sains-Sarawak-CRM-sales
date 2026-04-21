@@ -2,6 +2,7 @@ import { db, schema } from "@/db";
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import { Badge, ButtonLink, EmptyState, PageHeader } from "@/components/ui";
 
 export default async function ProposalsPage() {
   const session = await auth();
@@ -30,61 +31,56 @@ export default async function ProposalsPage() {
 
   return (
     <div>
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold">Proposals</h1>
-          <p className="mt-1 text-sm text-charcoal-soft">
-            Pre-quotation discussions. Open → Converted into Quotation (FSD §3.4).
-          </p>
-        </div>
-        {canCreate && (
-          <Link
-            href="/proposals/new"
-            className="inline-flex items-center gap-2 rounded-pill bg-gradient-accent px-6 py-3 font-semibold text-white shadow-accent-glow"
-          >
-            + New proposal
-          </Link>
-        )}
-      </header>
+      <PageHeader
+        title="Proposals"
+        description="Pre-quotation discussions. Open → Converted into Quotation (FSD §3.4)."
+        actions={canCreate ? (
+          <ButtonLink href="/proposals/new" tone="primary" size="md">+ New proposal</ButtonLink>
+        ) : null}
+      />
 
-      <div className="rounded-lg border border-hairline bg-gradient-surface p-0 shadow-claritas-1">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Proposal No</th>
-              <th>Subject</th>
-              <th>Lead</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr><td colSpan={6} className="py-12 text-center text-charcoal-faint">No proposals yet.</td></tr>
-            )}
-            {rows.map(p => (
-              <tr key={p.id}>
-                <td className="font-mono text-xs">{p.proposalNo}</td>
-                <td className="font-medium">{p.subject}</td>
-                <td>{p.leadOrg ?? "—"}</td>
-                <td>
-                  <Pill converted={p.statusId === 2}>
-                    {statusName.get(p.statusId) ?? "?"}
-                  </Pill>
-                </td>
-                <td className="text-charcoal-soft">{p.createdAt?.toLocaleDateString()}</td>
-                <td><Link href={`/proposals/${p.id}`} className="text-crimson hover:underline">Open →</Link></td>
+      {rows.length === 0 ? (
+        <EmptyState
+          title="No proposals yet"
+          description="Proposals are the bridge between an interested lead and a priced quotation."
+          action={canCreate ? <ButtonLink href="/proposals/new" tone="primary" size="md">+ New proposal</ButtonLink> : undefined}
+        />
+      ) : (
+        <div className="overflow-hidden rounded-card border border-hairline bg-white">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Proposal No</th>
+                <th>Subject</th>
+                <th>Lead</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map(p => (
+                <tr key={p.id}>
+                  <td className="font-mono text-xs text-ink">{p.proposalNo}</td>
+                  <td className="font-medium text-ink">{p.subject}</td>
+                  <td className="text-ink-soft">{p.leadOrg ?? "—"}</td>
+                  <td>
+                    {p.statusId === 2
+                      ? <Badge tone="teal" dot>{statusName.get(p.statusId) ?? "Converted"}</Badge>
+                      : <Badge tone="neutral" dot>{statusName.get(p.statusId) ?? "Open"}</Badge>}
+                  </td>
+                  <td className="text-ink-soft tabular-nums">{p.createdAt?.toLocaleDateString()}</td>
+                  <td>
+                    <Link href={`/proposals/${p.id}`} className="text-sm font-medium text-accent hover:text-accent-deep transition-colors duration-sains ease-sains">
+                      Open →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
-}
-
-function Pill({ children, converted }: { children: React.ReactNode; converted?: boolean }) {
-  const bg = converted ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-gray-100 text-charcoal";
-  return <span className={`inline-flex items-center rounded-pill border border-hairline px-2.5 py-0.5 text-xs font-semibold ${bg}`}>{children}</span>;
 }

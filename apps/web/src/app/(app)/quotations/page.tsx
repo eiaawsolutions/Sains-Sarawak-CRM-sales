@@ -2,6 +2,7 @@ import { db, schema } from "@/db";
 import { desc } from "drizzle-orm";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import { Badge, ButtonLink, EmptyState, PageHeader } from "@/components/ui";
 
 export default async function QuotationsPage() {
   const session = await auth();
@@ -27,60 +28,67 @@ export default async function QuotationsPage() {
 
   return (
     <div>
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold">Quotations</h1>
-          <p className="mt-1 text-sm text-charcoal-soft">
-            Draft → Under Vetting → Approved → Quotation Sent → Closed / Rejected. 6-state canonical (FSD §3.2.9).
-          </p>
-        </div>
-        {canCreate && (
-          <Link href="/quotations/new" className="rounded-pill bg-gradient-accent px-6 py-3 font-semibold text-white shadow-accent-glow">
-            + New quotation
-          </Link>
-        )}
-      </header>
+      <PageHeader
+        title="Quotations"
+        description="Draft → Under Vetting → Approved → Quotation Sent → Closed / Rejected. 6-state canonical (FSD §3.2.9)."
+        actions={canCreate ? (
+          <ButtonLink href="/quotations/new" tone="primary" size="md">+ New quotation</ButtonLink>
+        ) : null}
+      />
 
-      <div className="rounded-lg border border-hairline bg-gradient-surface shadow-claritas-1">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Quotation No</th>
-              <th>Revision</th>
-              <th>Status</th>
-              <th className="text-right">Total (MYR)</th>
-              <th>Created</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr><td colSpan={6} className="py-12 text-center text-charcoal-faint">No quotations yet.</td></tr>
-            )}
-            {rows.map(q => (
-              <tr key={q.id}>
-                <td className="font-mono text-xs">{q.no}</td>
-                <td>{q.revisionLetter}</td>
-                <td><StatusPill statusId={q.statusId} name={name.get(q.statusId) ?? "?"} /></td>
-                <td className="text-right font-semibold">{Number(q.total).toLocaleString()}</td>
-                <td className="text-charcoal-soft">{q.createdAt?.toLocaleDateString()}</td>
-                <td><Link href={`/quotations/${q.id}`} className="text-crimson hover:underline">Open →</Link></td>
+      {rows.length === 0 ? (
+        <EmptyState
+          title="No quotations yet"
+          description="Create a quotation from an approved proposal, or start a new one directly."
+          action={canCreate ? <ButtonLink href="/quotations/new" tone="primary" size="md">+ New quotation</ButtonLink> : undefined}
+        />
+      ) : (
+        <div className="overflow-hidden rounded-card border border-hairline bg-white">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Quotation No</th>
+                <th>Rev</th>
+                <th>Status</th>
+                <th className="text-right">Total (MYR)</th>
+                <th>Created</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map(q => (
+                <tr key={q.id}>
+                  <td className="font-mono text-xs text-ink">{q.no}</td>
+                  <td className="text-ink-soft">{q.revisionLetter}</td>
+                  <td><QuotationStatusBadge statusId={q.statusId} label={name.get(q.statusId) ?? "—"} /></td>
+                  <td className="text-right font-semibold tabular-nums text-ink">
+                    {Number(q.total).toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="text-ink-soft tabular-nums">{q.createdAt?.toLocaleDateString()}</td>
+                  <td>
+                    <Link href={`/quotations/${q.id}`} className="text-sm font-medium text-accent hover:text-accent-deep transition-colors duration-sains ease-sains">
+                      Open →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
 
-function StatusPill({ statusId, name }: { statusId: number; name: string }) {
-  const bg =
-    statusId === 1 ? "bg-gray-100 text-charcoal" :
-    statusId === 2 ? "bg-orange-50 text-orange-900 border-orange-200" :
-    statusId === 3 ? "bg-emerald-50 text-emerald-800 border-emerald-200" :
-    statusId === 4 ? "bg-crimson-faint text-crimson border-crimson/20" :
-    statusId === 5 ? "bg-gradient-accent text-white" :
-    "bg-charcoal text-white";
-  return <span className={`inline-flex items-center rounded-pill border border-hairline px-2.5 py-0.5 text-xs font-semibold ${bg}`}>{name}</span>;
+function QuotationStatusBadge({ statusId, label }: { statusId: number; label: string }) {
+  // 1=Draft, 2=Under Vetting, 3=Approved, 4=Sent, 5=Closed-Won, 6=Rejected
+  switch (statusId) {
+    case 1: return <Badge tone="neutral" dot>{label}</Badge>;
+    case 2: return <Badge tone="gold"    dot>{label}</Badge>;
+    case 3: return <Badge tone="accent"  dot>{label}</Badge>;
+    case 4: return <Badge tone="accent"  dot>{label}</Badge>;
+    case 5: return <Badge tone="teal"    dot>{label}</Badge>;
+    case 6: return <Badge tone="rose"    dot>{label}</Badge>;
+    default: return <Badge tone="neutral" dot>{label}</Badge>;
+  }
 }

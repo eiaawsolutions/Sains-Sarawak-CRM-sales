@@ -1,10 +1,10 @@
 import { db, schema } from "@/db";
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { sql } from "drizzle-orm";
-import { inngest } from "@/inngest/client";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { runHarness } from "@/uat/runner";
+import { Badge, Button, Card, EmptyState, Kpi, PageHeader } from "@/components/ui";
 
 /**
  * /admin/uat — the test-harness control panel. Admin-only.
@@ -14,7 +14,12 @@ import { runHarness } from "@/uat/runner";
 export default async function UatPage() {
   const session = await auth();
   if (session?.user.roleCode !== "Administrator") {
-    return <p className="text-charcoal-soft">Administrators only.</p>;
+    return (
+      <div>
+        <PageHeader title="UAT Test Harness" description="Administrators only." />
+        <EmptyState title="Forbidden" description="This surface is restricted to Administrators." />
+      </div>
+    );
   }
 
   const latest = await db.select().from(schema.uatTestRuns).orderBy(desc(schema.uatTestRuns.startedAt)).limit(1);
@@ -53,129 +58,178 @@ export default async function UatPage() {
     redirect("/admin/uat");
   }
 
+  const run = latest[0];
+
   return (
     <div>
-      <header className="mb-6 flex items-start justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-semibold">UAT Test Harness</h1>
-          <p className="mt-1 max-w-3xl text-sm text-charcoal-soft">
-            Auto-executes the 179 test cases from <em>(Revise) SAINS CRM – Full System Test Scripts 1.0</em>.
-            Each run scores pass / fail / skip and reconciles against the SAINS baseline so regressions
-            and newly-fixed items surface instantly.
-          </p>
-        </div>
-        <form action={runNow}>
-          <button className="rounded-pill bg-gradient-accent px-6 py-3 font-semibold text-white shadow-accent-glow">
-            Run all modules now
-          </button>
-        </form>
-      </header>
+      <PageHeader
+        title="UAT Test Harness"
+        description="Auto-executes the 179 test cases from (Revise) SAINS CRM – Full System Test Scripts 1.0. Each run scores pass / fail / skip and reconciles against the SAINS baseline so regressions and newly-fixed items surface instantly."
+        breadcrumbs={[{ label: "Administration", href: "/admin" }, { label: "UAT Test Harness" }]}
+        actions={
+          <form action={runNow}>
+            <Button tone="primary" size="md" type="submit">
+              Run all modules now
+            </Button>
+          </form>
+        }
+      />
 
-      {latest[0] && (
-        <div className="mb-6 grid grid-cols-5 gap-4">
-          <Stat label="Total"  value={latest[0].totalCases} />
-          <Stat label="Pass"   value={latest[0].passCount} color="text-emerald-700" />
-          <Stat label="Fail"   value={latest[0].failCount} color="text-crimson" />
-          <Stat label="Skip"   value={latest[0].skipCount} color="text-charcoal-soft" />
-          <Stat label="Score"  value={latest[0].scorePct ? `${latest[0].scorePct}%` : "—"} color="text-charcoal" />
-        </div>
-      )}
+      {/* KPIs */}
+      <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-5">
+        <Kpi label="Total" value={run ? run.totalCases : 0} />
+        <Kpi label="Pass"  value={run ? run.passCount  : 0} tone="teal" />
+        <Kpi label="Fail"  value={run ? run.failCount  : 0} tone="rose" />
+        <Kpi label="Skip"  value={run ? run.skipCount  : 0} />
+        <Kpi label="Score" value={run?.scorePct ? `${run.scorePct}%` : "—"} tone="accent" />
+      </section>
 
-      <div className="mb-6 rounded-lg border border-hairline bg-gradient-surface shadow-claritas-1">
-        <h2 className="px-4 pt-4 text-lg font-semibold">Latest run · matrix</h2>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Test ID</th>
-              <th>Module</th>
-              <th>Scenario</th>
-              <th>SAINS baseline</th>
-              <th>Harness</th>
-              <th>Reconciliation</th>
-              <th>Severity</th>
-              <th>Latency</th>
-              <th>Failure reason</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(cases as unknown as Array<any>).map((c) => (
-              <tr key={c.test_id}>
-                <td className="font-mono text-xs">{c.test_id}</td>
-                <td>{c.module}</td>
-                <td className="max-w-[260px]">{c.scenario}</td>
-                <td><Badge text={c.sains_baseline} /></td>
-                <td><Badge text={c.harness_outcome} /></td>
-                <td><ReconcileBadge value={c.reconciliation} /></td>
-                <td>{c.severity}</td>
-                <td className="text-charcoal-soft">{c.latency_ms != null ? `${c.latency_ms} ms` : "—"}</td>
-                <td className="max-w-[320px] text-xs text-charcoal-soft">{c.failure_reason}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Latest run · matrix */}
+      <section className="mb-8">
+        <Card padded={false}>
+          <div className="flex items-center justify-between border-b border-hairline px-5 py-4">
+            <div>
+              <h2 className="text-sm font-semibold text-ink">Latest run · matrix</h2>
+              <p className="mt-0.5 text-xs text-ink-soft">
+                Per-case reconciliation between SAINS baseline and this harness run.
+              </p>
+            </div>
+            {run && (
+              <span className="text-[11px] text-ink-faint tabular-nums">
+                Run started {run.startedAt.toLocaleString()} · {run.triggerSource}
+              </span>
+            )}
+          </div>
 
-      <div className="rounded-lg border border-hairline bg-gradient-surface shadow-claritas-1">
-        <h2 className="px-4 pt-4 text-lg font-semibold">Recent runs</h2>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Started</th>
-              <th>Trigger</th>
-              <th>Pass</th>
-              <th>Fail</th>
-              <th>Skip</th>
-              <th>Score</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recent.map(r => (
-              <tr key={r.id}>
-                <td>{r.startedAt.toLocaleString()}</td>
-                <td>{r.triggerSource}</td>
-                <td>{r.passCount}</td>
-                <td>{r.failCount}</td>
-                <td>{r.skipCount}</td>
-                <td>{r.scorePct ? `${r.scorePct}%` : "—"}</td>
-                <td><Badge text={r.status} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          {(cases as unknown as Array<Record<string, unknown>>).length === 0 ? (
+            <div className="p-8">
+              <EmptyState
+                title="No results yet"
+                description="Click 'Run all modules now' to execute the 179 cases and populate the matrix."
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-hairline text-left text-[11px] uppercase tracking-wider text-ink-faint">
+                    <th className="px-5 py-3 font-semibold">Test ID</th>
+                    <th className="px-5 py-3 font-semibold">Module</th>
+                    <th className="px-5 py-3 font-semibold">Scenario</th>
+                    <th className="px-5 py-3 font-semibold">SAINS baseline</th>
+                    <th className="px-5 py-3 font-semibold">Harness</th>
+                    <th className="px-5 py-3 font-semibold">Reconciliation</th>
+                    <th className="px-5 py-3 font-semibold">Severity</th>
+                    <th className="px-5 py-3 font-semibold">Latency</th>
+                    <th className="px-5 py-3 font-semibold">Failure reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {(cases as unknown as Array<{
+                    test_id: string; module: string; scenario: string; severity: string;
+                    sains_baseline: string; harness_outcome: string; latency_ms: number | null;
+                    failure_reason: string | null; reconciliation: string;
+                  }>).map((c) => (
+                    <tr key={c.test_id} className="hover:bg-paper-2">
+                      <td className="whitespace-nowrap px-5 py-3 font-mono text-xs text-ink">{c.test_id}</td>
+                      <td className="whitespace-nowrap px-5 py-3 text-ink-soft">{c.module}</td>
+                      <td className="max-w-[260px] px-5 py-3 text-ink-soft">{c.scenario}</td>
+                      <td className="whitespace-nowrap px-5 py-3"><OutcomeBadge value={c.sains_baseline} /></td>
+                      <td className="whitespace-nowrap px-5 py-3"><OutcomeBadge value={c.harness_outcome} /></td>
+                      <td className="whitespace-nowrap px-5 py-3"><ReconcileBadge value={c.reconciliation} /></td>
+                      <td className="whitespace-nowrap px-5 py-3 text-ink-soft">{c.severity}</td>
+                      <td className="whitespace-nowrap px-5 py-3 text-ink-faint tabular-nums">
+                        {c.latency_ms != null ? `${c.latency_ms} ms` : "—"}
+                      </td>
+                      <td className="max-w-[320px] px-5 py-3 text-xs text-ink-soft">{c.failure_reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </section>
+
+      {/* Recent runs */}
+      <section>
+        <Card padded={false}>
+          <div className="border-b border-hairline px-5 py-4">
+            <h2 className="text-sm font-semibold text-ink">Recent runs</h2>
+            <p className="mt-0.5 text-xs text-ink-soft">Last 25 runs, newest first.</p>
+          </div>
+
+          {recent.length === 0 ? (
+            <div className="p-8">
+              <EmptyState title="No runs yet" description="The harness has not executed any runs on this deployment." />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-hairline text-left text-[11px] uppercase tracking-wider text-ink-faint">
+                    <th className="px-5 py-3 font-semibold">Started</th>
+                    <th className="px-5 py-3 font-semibold">Trigger</th>
+                    <th className="px-5 py-3 font-semibold">Pass</th>
+                    <th className="px-5 py-3 font-semibold">Fail</th>
+                    <th className="px-5 py-3 font-semibold">Skip</th>
+                    <th className="px-5 py-3 font-semibold">Score</th>
+                    <th className="px-5 py-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {recent.map(r => (
+                    <tr key={r.id} className="hover:bg-paper-2">
+                      <td className="whitespace-nowrap px-5 py-3 text-ink tabular-nums">{r.startedAt.toLocaleString()}</td>
+                      <td className="whitespace-nowrap px-5 py-3 text-ink-soft">{r.triggerSource}</td>
+                      <td className="whitespace-nowrap px-5 py-3 tabular-nums text-ink">{r.passCount}</td>
+                      <td className="whitespace-nowrap px-5 py-3 tabular-nums text-ink">{r.failCount}</td>
+                      <td className="whitespace-nowrap px-5 py-3 tabular-nums text-ink">{r.skipCount}</td>
+                      <td className="whitespace-nowrap px-5 py-3 tabular-nums text-ink">{r.scorePct ? `${r.scorePct}%` : "—"}</td>
+                      <td className="whitespace-nowrap px-5 py-3"><RunStatusBadge value={r.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </section>
     </div>
   );
 }
 
-function Stat({ label, value, color = "text-charcoal" }: { label: string; value: string | number; color?: string }) {
-  return (
-    <div className="rounded-lg border border-hairline bg-gradient-surface px-4 py-5 text-center shadow-claritas-1">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-soft">{label}</div>
-      <div className={`mt-1 text-3xl font-semibold ${color}`}>{value}</div>
-    </div>
-  );
-}
-
-function Badge({ text }: { text: string }) {
-  const cls =
-    text === "Pass" || text === "completed" ? "bg-emerald-50 text-emerald-800" :
-    text === "Fail" || text === "aborted"    ? "bg-crimson-faint text-crimson" :
-    text === "Skip"                          ? "bg-gray-100 text-charcoal-soft" :
-    text === "running"                       ? "bg-orange-50 text-orange-900" :
-    "bg-white";
-  return <span className={`inline-flex items-center rounded-pill border border-hairline px-2.5 py-0.5 text-xs font-semibold ${cls}`}>{text}</span>;
+function OutcomeBadge({ value }: { value: string }) {
+  const map: Record<string, "teal" | "rose" | "neutral" | "gold" | "accent"> = {
+    Pass:   "teal",
+    Fail:   "rose",
+    Skip:   "neutral",
+    NotRun: "neutral",
+    Error:  "gold",
+  };
+  return <Badge tone={map[value] ?? "neutral"}>{value}</Badge>;
 }
 
 function ReconcileBadge({ value }: { value: string }) {
-  const map: Record<string, { text: string; cls: string }> = {
-    "Agree-Pass":        { text: "✓ Agree",            cls: "bg-emerald-50 text-emerald-800" },
-    "Agree-Fail":        { text: "✗ Agree (both fail)", cls: "bg-crimson-faint text-crimson" },
-    "Regression-Fixed":  { text: "↑ Now passing",       cls: "bg-emerald-50 text-emerald-800" },
-    "Regression-Broken": { text: "↓ Broke",             cls: "bg-crimson text-white" },
-    "Skipped":           { text: "— skipped",           cls: "bg-gray-100 text-charcoal-soft" },
-    "NotRun":            { text: "— not run",           cls: "bg-gray-100 text-charcoal-soft" },
+  const map: Record<string, { label: string; tone: "teal" | "rose" | "neutral" | "gold" | "accent" }> = {
+    "Agree-Pass":         { label: "Agree",              tone: "teal"    },
+    "Agree-Fail":         { label: "Agree (both fail)",  tone: "rose"    },
+    "Regression-Fixed":   { label: "Now passing",        tone: "teal"    },
+    "Regression-Broken":  { label: "Broke",              tone: "rose"    },
+    "Skipped":            { label: "Skipped",            tone: "neutral" },
+    "NotRun":             { label: "Not run",            tone: "neutral" },
+    "Mismatch":           { label: "Mismatch",           tone: "gold"    },
   };
-  const m = map[value] ?? { text: value, cls: "bg-gray-100 text-charcoal" };
-  return <span className={`inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-semibold ${m.cls}`}>{m.text}</span>;
+  const m = map[value] ?? { label: value, tone: "neutral" as const };
+  return <Badge tone={m.tone}>{m.label}</Badge>;
+}
+
+function RunStatusBadge({ value }: { value: string }) {
+  const map: Record<string, "teal" | "rose" | "neutral" | "gold" | "accent"> = {
+    completed: "teal",
+    running:   "gold",
+    aborted:   "rose",
+    failed:    "rose",
+  };
+  return <Badge tone={map[value] ?? "neutral"}>{value}</Badge>;
 }

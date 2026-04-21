@@ -2,11 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Focus ring — WCAG AA, Claritas crimson */
-:focus-visible {
-  @apply outline-none ring-2 ring-crimson/60 ring-offset-2 ring-offset-white rounded-sm;
+/* ==== Base ======================================================= */
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-feature-settings: "cv11", "ss01";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Focus ring — WCAG AA, SAINS accent navy. Apply to interactive only. */
+:focus { outline: none; }
+:focus-visible {
+  @apply outline-none ring-2 ring-accent/70 ring-offset-2 ring-offset-white rounded-sm;
+}
+
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -14,16 +25,40 @@
   }
 }
 
-/* Data-table base — used across Leads / Quotations / UAT matrix */
+/* ==== Type scale hardening ======================================= */
+h1, h2, h3, h4 { letter-spacing: -0.015em; }
+h1 { font-feature-settings: "ss01"; }
+
+/* ==== Data table ================================================= */
 .data-table {
   @apply w-full text-sm border-collapse;
 }
 .data-table thead th {
-  @apply text-left px-4 py-3 bg-gradient-surface text-charcoal-soft font-semibold border-b-2 border-hairline;
+  @apply text-left px-4 py-3 bg-paper-2 text-ink-soft font-medium uppercase tracking-wider text-[11px] border-b border-hairline;
 }
 .data-table tbody td {
-  @apply px-4 py-3 border-b border-hairline;
+  @apply px-4 py-3 border-b border-hairline align-middle;
+}
+.data-table tbody tr {
+  @apply transition-colors duration-sains ease-sains;
 }
 .data-table tbody tr:hover {
-  @apply bg-crimson-faint;
+  @apply bg-paper-2;
+}
+.data-table tbody tr:last-child td {
+  @apply border-b-0;
+}
+
+/* ==== Scrollbar (quiet) ========================================== */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.14); border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: rgba(15,23,42,0.24); background-clip: padding-box; border: 2px solid transparent; }
+
+/* ==== Print (quotation / proposal / QPR report) ================== */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .data-table thead th { background: #fff; color: #0F172A; }
+  a { color: #0F172A; text-decoration: none; }
 }

@@ -3,6 +3,8 @@ import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { Alert, Button, Field, Input } from "@/components/ui";
+import { SainsLogo } from "@/components/shell";
 
 /**
  * SAINS CRM login page. Backed by Auth.js v5 Credentials provider. Error messages are
@@ -20,14 +22,10 @@ export default async function SignInPage({
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const password = String(formData.get("password") ?? "");
 
-    // LOGIN-007: blank field — HTML required handles the browser side;
-    // server-side we still send an explicit error if they slipped past.
     if (!email || !password) {
       redirect("/auth/signin?error=BlankField");
     }
 
-    // Distinguish "unregistered" (LOGIN-006) from "wrong password" (LOGIN-005)
-    // using the same wording the FSD specifies.
     const row = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
     if (!row || !row.isActive) {
       redirect("/auth/signin?error=Unregistered");
@@ -45,88 +43,126 @@ export default async function SignInPage({
 
   const errorMessage =
     error === "BlankField"        ? "Please fill out this field" :
-    error === "Unregistered"      ? 'Error: "We could not find an active user with that email."' :
-    error === "CredentialsSignin" ? 'Error: "We could not find an active user with that email and password combination."' :
+    error === "Unregistered"      ? 'We could not find an active user with that email.' :
+    error === "CredentialsSignin" ? 'We could not find an active user with that email and password combination.' :
     error                         ? "Sign-in failed. Please try again." :
     null;
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      <div className="mx-auto flex min-h-screen max-w-md items-center justify-center px-4">
-        <div className="w-full rounded-lg border border-hairline bg-white p-8 shadow-claritas-1">
-          <div className="mb-6 flex items-center gap-3">
-            <Logo />
-            <div>
-              <h1 className="text-xl font-semibold">SAINS CRM</h1>
-              <p className="text-xs text-charcoal-soft">Sign in to continue</p>
+    <div className="relative min-h-screen bg-paper-2">
+      {/* Subtle hairline grid backdrop — quiet, gov-credible */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(15,23,42,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.04) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
+
+      <div className="relative mx-auto grid min-h-screen max-w-6xl items-center gap-12 px-6 py-10 lg:grid-cols-2 lg:px-10">
+        {/* Left — identity + context */}
+        <div className="hidden flex-col justify-between lg:flex">
+          <div className="flex items-center gap-3">
+            <SainsLogo size={40} />
+            <div className="leading-tight">
+              <div className="text-base font-semibold tracking-tight text-ink">SAINS CRM</div>
+              <div className="text-[11px] font-medium uppercase tracking-wider text-ink-faint">Sales · Sarawak Information Systems</div>
             </div>
           </div>
 
-          {errorMessage && (
-            <div role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-              {errorMessage}
-            </div>
-          )}
+          <div className="max-w-md">
+            <h2 className="text-3xl font-semibold tracking-tight text-ink leading-tight">
+              From lead to customer,<br />in one trusted workspace.
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-ink-soft">
+              Pipeline discipline, quotation governance and sales insight for
+              account managers, section heads and directors across SAINS sales teams.
+            </p>
+            <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-5 text-sm">
+              <FeatureRow k="Ambient capture" v="Calls, email, meetings — logged without typing." />
+              <FeatureRow k="PDPA-ready" v="Audit-trailed, permission-scoped, Malaysia-resident." />
+              <FeatureRow k="Vetting built-in" v="Section & Unit Head approval flows on every quote." />
+              <FeatureRow k="QPR in one click" v="Quotation performance report with XLSX export." />
+            </dl>
+          </div>
 
-          <form action={loginAction} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-charcoal-soft">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                autoComplete="email"
-                className="w-full rounded-md border border-hairline bg-white px-3 py-2 text-sm focus:border-crimson"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-charcoal-soft">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                className="w-full rounded-md border border-hairline bg-white px-3 py-2 text-sm focus:border-crimson"
-              />
-            </div>
-
-            <input type="hidden" name="callbackUrl" value={callbackUrl} />
-
-            <button
-              type="submit"
-              className="w-full rounded-pill bg-gradient-accent px-6 py-3 font-semibold text-white shadow-accent-glow"
-            >
-              Login
-            </button>
-          </form>
-
-          <p className="mt-6 border-t border-hairline pt-4 text-center text-xs text-charcoal-faint">
-            Claritas × EIAAW Solutions · FSD v1.3
+          <p className="text-[11px] text-ink-faint">
+            Sarawak Information Systems Sdn. Bhd. · Kuching · v1.0
           </p>
+        </div>
+
+        {/* Right — sign-in card */}
+        <div className="mx-auto w-full max-w-md">
+          <div className="rounded-card border border-hairline bg-white p-7 shadow-ink-2">
+            <div className="mb-6 flex items-center gap-3 lg:hidden">
+              <SainsLogo size={32} />
+              <div className="leading-tight">
+                <div className="text-sm font-semibold tracking-tight text-ink">SAINS CRM</div>
+                <div className="text-[11px] font-medium uppercase tracking-wider text-ink-faint">Sales</div>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h1 className="text-xl font-semibold tracking-tight text-ink">Sign in</h1>
+              <p className="mt-1 text-sm text-ink-soft">Use your SAINS corporate credentials.</p>
+            </div>
+
+            {errorMessage && (
+              <div className="mb-4">
+                <Alert tone="error" title="Sign-in failed">{errorMessage}</Alert>
+              </div>
+            )}
+
+            <form action={loginAction} className="space-y-4">
+              <Field label="Email" htmlFor="email" required>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="name@sains.com.my"
+                />
+              </Field>
+
+              <Field label="Password" htmlFor="password" required>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                />
+              </Field>
+
+              <input type="hidden" name="callbackUrl" value={callbackUrl} />
+
+              <Button type="submit" tone="primary" size="lg" className="w-full">
+                Sign in
+              </Button>
+            </form>
+
+            <p className="mt-6 border-t border-hairline pt-4 text-center text-[11px] text-ink-faint">
+              FSD v1.3 · Protected access · Activity is audit-logged.
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function Logo() {
+function FeatureRow({ k, v }: { k: string; v: string }) {
   return (
-    <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden>
-      <circle cx="18" cy="18" r="16" fill="url(#g3)" stroke="#3f3f3f" strokeWidth="0.5" />
-      <defs>
-        <linearGradient id="g3" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#721011" />
-          <stop offset="100%" stopColor="#3f3f3f" />
-        </linearGradient>
-      </defs>
-    </svg>
+    <div>
+      <dt className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-accent-deep">
+        <span className="h-1 w-1 rounded-full bg-accent" />
+        {k}
+      </dt>
+      <dd className="mt-1 text-ink-soft">{v}</dd>
+    </div>
   );
 }
 

@@ -1,61 +1,121 @@
 import Link from "next/link";
+import { ButtonLink } from "@/components/ui";
+import { SainsLogo } from "@/components/shell";
 
 /**
- * Landing — if authenticated, the shell redirects to /leads. Unauth visitors see this hero
- * and a single CTA to kick off the FIM OIDC flow.
+ * Public landing — unauthenticated visitors only. Authenticated users are redirected to
+ * /leads by the middleware layer. Intentionally quiet: government-credible, no marketing
+ * gloss. One primary CTA (sign in), one secondary (docs).
  */
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-gradient-hero">
-      <header className="flex items-center justify-between px-8 py-6">
-        <div className="flex items-center gap-3">
-          <Logo />
-          <span className="text-lg font-semibold tracking-tight">SAINS CRM Sales</span>
+    <div className="min-h-screen bg-paper-2">
+      <header className="border-b border-hairline bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 lg:px-10">
+          <div className="flex items-center gap-3">
+            <SainsLogo size={32} />
+            <div className="leading-tight">
+              <div className="text-sm font-semibold tracking-tight text-ink">SAINS CRM</div>
+              <div className="text-[10px] font-medium uppercase tracking-wider text-ink-faint">Sales</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/docs" className="hidden text-sm text-ink-soft hover:text-ink sm:inline-block">Documentation</Link>
+            <ButtonLink href="/auth/signin" tone="primary" size="md">Sign in</ButtonLink>
+          </div>
         </div>
-        <Link
-          href="/auth/signin"
-          className="inline-flex items-center gap-2 rounded-pill bg-gradient-accent px-6 py-3 font-semibold text-white shadow-accent-glow transition hover:bg-gradient-cta-hover"
-        >
-          Sign in with SAINS SSO
-        </Link>
       </header>
 
-      <section className="mx-auto max-w-4xl px-8 pt-24 pb-16 text-center">
-        <h1 className="text-5xl font-semibold tracking-tight text-charcoal md:text-6xl">
-          Lead → Proposal → Quotation → <span className="text-crimson">Customer</span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-charcoal-soft">
-          A world-class CRM for Sarawak Information Systems. Built on the signed FSD v1.3 with
-          confirmed v1.1 upgrades: ambient capture, multi-agent AI, intent graphs, PDPA-grade
-          trust layer.
-        </p>
-        <div className="mt-10 flex items-center justify-center gap-4">
-          <Link href="/auth/signin" className="rounded-pill bg-gradient-accent px-8 py-4 font-semibold text-white shadow-accent-glow transition hover:bg-gradient-cta-hover">
-            Get started
-          </Link>
-          <Link href="/docs" className="rounded-pill border border-hairline px-8 py-4 font-medium text-charcoal transition hover:border-crimson hover:text-crimson">
-            How it works
-          </Link>
-        </div>
-      </section>
+      <main className="mx-auto max-w-6xl px-6 py-16 lg:px-10 lg:py-24">
+        <section className="grid gap-12 lg:grid-cols-5 lg:gap-16">
+          <div className="lg:col-span-3">
+            <span className="inline-flex items-center gap-2 rounded-pill border border-hairline bg-white px-3 py-1 text-[11px] font-medium text-ink-soft">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal" />
+              Live · FSD v1.3 · PDPA compliant
+            </span>
+            <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-ink sm:text-5xl lg:text-6xl">
+              The sales workspace for <span className="text-accent-deep">Sarawak Information Systems</span>.
+            </h1>
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-soft">
+              Lead → Proposal → Quotation → Customer. One pipeline,
+              audit-trailed, governed by Section &amp; Unit Head approvals,
+              instrumented for quotation performance reporting.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <ButtonLink href="/auth/signin" tone="primary" size="lg">
+                Sign in
+              </ButtonLink>
+              <ButtonLink href="/docs" tone="secondary" size="lg">
+                How it works
+              </ButtonLink>
+            </div>
+          </div>
 
-      <footer className="mt-16 px-8 pb-8 text-center text-xs text-charcoal-faint">
-        Claritas × EIAAW Solutions · SAINS Sarawak · v1.0
+          <aside className="lg:col-span-2">
+            <div className="rounded-card border border-hairline bg-white p-6 shadow-ink-1">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-ink-faint">Pipeline at a glance</div>
+              <ol className="mt-4 space-y-0">
+                <StageRow n={1} label="Lead" hint="Captured from CMD / FIM / manual entry" />
+                <StageRow n={2} label="Proposal" hint="Drafted, reviewed, versioned" />
+                <StageRow n={3} label="Quotation" hint="Section & Unit Head approval" />
+                <StageRow n={4} label="Customer" hint="Won → QPR → renewal" last />
+              </ol>
+            </div>
+          </aside>
+        </section>
+
+        <section className="mt-24 grid gap-px overflow-hidden rounded-card border border-hairline bg-hairline sm:grid-cols-2 lg:grid-cols-4">
+          <Capability
+            title="Ambient capture"
+            body="Calls, email and meetings logged without typing. Rep stays on the phone, not the form."
+          />
+          <Capability
+            title="Multi-agent AI"
+            body="Specialist agents for enrichment, dedup, draft and forecast. Human in the loop on every send."
+          />
+          <Capability
+            title="Vetting workflow"
+            body="Section &amp; Unit Head approval on every quotation. FSD-compliant, audit-trailed end to end."
+          />
+          <Capability
+            title="QPR in one click"
+            body="Quotation Performance Report filtered, paginated, exportable to XLSX up to 50,000 rows."
+          />
+        </section>
+      </main>
+
+      <footer className="border-t border-hairline bg-white">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-6 text-[11px] text-ink-faint sm:flex-row lg:px-10">
+          <div>Sarawak Information Systems Sdn. Bhd. · Kuching, Sarawak</div>
+          <div>SAINS CRM Sales · v1.0</div>
+        </div>
       </footer>
-    </main>
+    </div>
   );
 }
 
-function Logo() {
+function StageRow({ n, label, hint, last }: { n: number; label: string; hint: string; last?: boolean }) {
   return (
-    <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden>
-      <circle cx="18" cy="18" r="16" fill="url(#g)" stroke="#3f3f3f" strokeWidth="0.5" />
-      <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#721011" />
-          <stop offset="100%" stopColor="#3f3f3f" />
-        </linearGradient>
-      </defs>
-    </svg>
+    <li className="relative flex items-start gap-4 py-3">
+      <div className="relative flex flex-col items-center">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-accent/30 bg-accent-faint text-[11px] font-semibold text-accent-deep">
+          {n}
+        </span>
+        {!last && <span className="mt-1 h-6 w-px bg-hairline" aria-hidden />}
+      </div>
+      <div className="pt-0.5">
+        <div className="text-sm font-medium text-ink">{label}</div>
+        <div className="text-[12px] text-ink-soft">{hint}</div>
+      </div>
+    </li>
+  );
+}
+
+function Capability({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="bg-white p-6">
+      <div className="text-sm font-semibold text-ink">{title}</div>
+      <div className="mt-2 text-[13px] leading-relaxed text-ink-soft">{body}</div>
+    </div>
   );
 }
