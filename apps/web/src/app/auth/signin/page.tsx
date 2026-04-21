@@ -64,11 +64,11 @@ export default async function SignInPage({
       <div className="relative mx-auto grid min-h-screen max-w-6xl items-center gap-12 px-6 py-10 lg:grid-cols-2 lg:px-10">
         {/* Left — identity + context */}
         <div className="hidden flex-col justify-between lg:flex">
-          <div className="flex items-center gap-3">
-            <SainsLogo size={40} />
-            <div className="leading-tight">
-              <div className="text-base font-semibold tracking-tight text-ink">SAINS CRM</div>
-              <div className="text-[11px] font-medium uppercase tracking-wider text-ink-faint">Sales · Sarawak Information Systems</div>
+          <div className="flex items-center gap-4">
+            <SainsLogo size={36} />
+            <div className="leading-tight border-l border-hairline pl-4">
+              <div className="text-sm font-semibold tracking-tight text-ink">CRM Sales</div>
+              <div className="text-[11px] font-medium uppercase tracking-wider text-ink-faint">Sarawak Information Systems</div>
             </div>
           </div>
 
@@ -97,11 +97,10 @@ export default async function SignInPage({
         <div className="mx-auto w-full max-w-md">
           <div className="rounded-card border border-hairline bg-white p-7 shadow-ink-2">
             <div className="mb-6 flex items-center gap-3 lg:hidden">
-              <SainsLogo size={32} />
-              <div className="leading-tight">
-                <div className="text-sm font-semibold tracking-tight text-ink">SAINS CRM</div>
-                <div className="text-[11px] font-medium uppercase tracking-wider text-ink-faint">Sales</div>
-              </div>
+              <SainsLogo size={28} />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-soft border-l border-hairline pl-3">
+                CRM Sales
+              </span>
             </div>
 
             <div className="mb-6">

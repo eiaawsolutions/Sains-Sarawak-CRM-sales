@@ -24,16 +24,23 @@ type NavGroup = {
   items: NavItem[];
 };
 
+/**
+ * Official SAINS lockup. Renders /sains-logo.svg (the corporate mark + "sains"
+ * wordmark, native aspect ratio 447:190 ≈ 2.35:1). The `size` prop sets the
+ * rendered HEIGHT in px; width scales to preserve aspect.
+ */
 export function SainsLogo({ size = 32 }: { size?: number }) {
+  const width = Math.round((size * 447) / 190);
   return (
-    <svg width={size} height={size} viewBox="0 0 36 36" aria-hidden>
-      <rect x="2" y="2" width="32" height="32" rx="8" fill="#0E6BA8" />
-      <path
-        d="M10 22.5c1.2 1.6 3.3 2.6 5.6 2.6 3.2 0 5-1.6 5-3.5 0-2-1.7-2.9-5-3.7-2.8-.6-4.2-1.2-4.2-2.7 0-1.4 1.4-2.4 3.6-2.4 2 0 3.6.8 4.6 2.2"
-        stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" fill="none"
-      />
-      <circle cx="26" cy="11" r="1.6" fill="#0D8F8F" />
-    </svg>
+    <img
+      src="/sains-logo.svg"
+      alt="SAINS"
+      width={width}
+      height={size}
+      style={{ width, height: size }}
+      className="block select-none"
+      draggable={false}
+    />
   );
 }
 
@@ -110,10 +117,10 @@ export function AppShell({
         )}
       >
         <div className="flex h-16 items-center gap-3 border-b border-hairline px-5">
-          <SainsLogo size={28} />
-          <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-tight text-ink">SAINS CRM</div>
-            <div className="text-[10px] font-medium uppercase tracking-wider text-ink-faint">Sales</div>
+          <SainsLogo size={22} />
+          <div className="ml-auto leading-tight text-right">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">CRM</div>
+            <div className="text-[9px] font-medium uppercase tracking-wider text-ink-faint">Sales</div>
           </div>
         </div>
 

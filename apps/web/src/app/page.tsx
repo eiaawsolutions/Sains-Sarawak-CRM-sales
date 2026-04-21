@@ -13,11 +13,10 @@ export default function HomePage() {
       <header className="border-b border-hairline bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 lg:px-10">
           <div className="flex items-center gap-3">
-            <SainsLogo size={32} />
-            <div className="leading-tight">
-              <div className="text-sm font-semibold tracking-tight text-ink">SAINS CRM</div>
-              <div className="text-[10px] font-medium uppercase tracking-wider text-ink-faint">Sales</div>
-            </div>
+            <SainsLogo size={28} />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-soft border-l border-hairline pl-3">
+              CRM Sales
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/docs" className="hidden text-sm text-ink-soft hover:text-ink sm:inline-block">Documentation</Link>
