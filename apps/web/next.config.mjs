@@ -4,8 +4,8 @@ const nextConfig = {
   output: "standalone", // Railway-friendly — ships a minimal runtime
   outputFileTracingIncludes: {
     "/docs/**": ["./src/content/docs/**"],
-    "/api/quotations/**": ["./public/fonts/**"],
-    "/api/reports/**": ["./public/fonts/**"],
+    "/api/quotations/**": ["./public/fonts/**", "./public/sains-logo.png"],
+    "/api/reports/**": ["./public/fonts/**", "./public/sains-logo.png"],
   },
   experimental: {
     serverActions: { allowedOrigins: ["*"] },

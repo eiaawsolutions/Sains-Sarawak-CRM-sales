@@ -2,9 +2,20 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db";
 import { eq, asc } from "drizzle-orm";
-import { renderToBuffer, Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
+import { renderToBuffer, Document, Page, Text, View, Image, StyleSheet, Font } from "@react-pdf/renderer";
 import React from "react";
 import path from "node:path";
+import fs from "node:fs";
+
+// Load the SAINS lockup once. @react-pdf expects a Buffer / data URL — passing a raw
+// Windows/POSIX path makes it attempt a network fetch (fails silently into a blank image).
+let logoBuffer: Buffer | null = null;
+function getLogo(): Buffer | null {
+  if (logoBuffer) return logoBuffer;
+  const p = path.join(process.cwd(), "public", "sains-logo.png");
+  try { logoBuffer = fs.readFileSync(p); return logoBuffer; }
+  catch { return null; }
+}
 
 // @react-pdf v4 no longer ships resolvable Helvetica AFM data through the Next
 // bundler, which caused "Cannot read properties of undefined (reading 'unitsPerEm')"
@@ -91,11 +102,13 @@ const ACCENT = "#721011";
 const styles = StyleSheet.create({
   page: { paddingTop: 42, paddingBottom: 64, paddingHorizontal: 48, fontSize: 10, fontFamily: "Inter", color: INK, lineHeight: 1.4 },
 
-  // Letterhead
-  letterhead: { borderBottomWidth: 2, borderBottomColor: ACCENT, paddingBottom: 10, marginBottom: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
-  brandMark: { fontSize: 22, fontWeight: 700, color: ACCENT, letterSpacing: 2 },
-  brandName: { fontSize: 9, color: INK, marginTop: 2 },
+  // Letterhead. alignItems: flex-start so the variant label (QUOTATION / AOQ / etc.)
+  // sits at the top next to the logo rather than squashed against the bottom rule.
+  letterhead: { borderBottomWidth: 2, borderBottomColor: ACCENT, paddingBottom: 10, marginBottom: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  brandLogo: { width: 150, height: 64, marginBottom: 6 },
+  brandName: { fontSize: 9, color: INK, fontWeight: 700, marginTop: 2 },
   brandMeta: { fontSize: 8, color: MUTED, marginTop: 1 },
+  variantLabel: { fontSize: 10, color: ACCENT, fontWeight: 700, letterSpacing: 1, textAlign: "right" },
 
   // Top-right metadata (MySST, Ref, Date)
   metaRight: { textAlign: "right", fontSize: 9, color: INK, marginBottom: 18 },
@@ -231,13 +244,13 @@ function QuotationPdf({
         {/* Letterhead */}
         <View style={styles.letterhead}>
           <View>
-            <Text style={styles.brandMark}>SAINS</Text>
+            {getLogo() && <Image style={styles.brandLogo} src={getLogo() as Buffer} />}
             <Text style={styles.brandName}>{SAINS.name}</Text>
             <Text style={styles.brandMeta}>{SAINS.addressLine1}  ·  {SAINS.addressLine2}</Text>
             <Text style={styles.brandMeta}>Tel: {SAINS.tel}  ·  Fax: {SAINS.fax}  ·  {SAINS.website}</Text>
           </View>
-          <View>
-            <Text style={[styles.brandMeta, { textAlign: "right" }]}>
+          <View style={{ paddingTop: 8 }}>
+            <Text style={styles.variantLabel}>
               {isProposal ? "PROPOSAL COSTING SHEET" : isAOQ ? "ACCEPTANCE OF QUOTATION" : "QUOTATION"}
             </Text>
           </View>

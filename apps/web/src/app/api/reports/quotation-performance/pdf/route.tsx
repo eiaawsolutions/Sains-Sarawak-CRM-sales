@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
-import { renderToBuffer, Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
+import { renderToBuffer, Document, Page, Text, View, Image, StyleSheet, Font } from "@react-pdf/renderer";
 import React from "react";
 import path from "node:path";
+import fs from "node:fs";
 import { buildClosedWhere, parseFilters } from "../../../../(app)/reports/filters";
+
+let logoBuffer: Buffer | null = null;
+function getLogo(): Buffer | null {
+  if (logoBuffer) return logoBuffer;
+  const p = path.join(process.cwd(), "public", "sains-logo.png");
+  try { logoBuffer = fs.readFileSync(p); return logoBuffer; }
+  catch { return null; }
+}
 
 // @react-pdf v4 no longer ships a resolvable Helvetica AFM through the Next bundler,
 // which causes "Cannot read properties of undefined (reading 'unitsPerEm')" on Railway.
@@ -88,6 +97,9 @@ export async function GET(req: NextRequest) {
 
 const s = StyleSheet.create({
   page: { padding: 36, fontSize: 10, fontFamily: "Inter", color: "#3f3f3f" },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: 1.5, borderBottomColor: "#721011", paddingBottom: 10, marginBottom: 12 },
+  logo: { width: 132, height: 56 },
+  headerRight: { textAlign: "right" },
   h1: { fontSize: 18, fontWeight: 700, color: "#721011" },
   meta: { fontSize: 9, color: "#6b6b6b", marginTop: 2, marginBottom: 14 },
   h2: { fontSize: 11, fontWeight: 700, color: "#721011", marginTop: 16, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 },
@@ -105,11 +117,16 @@ function ReportPdf({ status, rejections, revisions, closed, filterCount }: {
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        <Text style={s.h1}>Quotation Performance Report</Text>
-        <Text style={s.meta}>
-          FSD §3.6.1 · Generated {new Date().toISOString().slice(0, 19).replace("T", " ")}
-          {filterCount > 0 ? ` · ${filterCount} filter${filterCount > 1 ? "s" : ""} applied` : ""}
-        </Text>
+        <View style={s.header}>
+          {getLogo() && <Image style={s.logo} src={getLogo() as Buffer} />}
+          <View style={s.headerRight}>
+            <Text style={s.h1}>Quotation Performance Report</Text>
+            <Text style={s.meta}>
+              FSD §3.6.1 · Generated {new Date().toISOString().slice(0, 19).replace("T", " ")}
+              {filterCount > 0 ? ` · ${filterCount} filter${filterCount > 1 ? "s" : ""} applied` : ""}
+            </Text>
+          </View>
+        </View>
 
         <Text style={s.h2}>Status Summary</Text>
         <View style={s.rowHead}>
